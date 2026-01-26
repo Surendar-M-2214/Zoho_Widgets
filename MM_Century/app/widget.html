@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate Generator</title>
+
+  <!-- Libs -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://live.zwidgets.com/js-sdk/1.5/ZohoEmbededAppSDK.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <script>
+    // PDF.js Worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Tailwind Config
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          },
+          boxShadow: {
+            '3d': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            'inner-glow': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #f8fafc;
+      /* Fallback */
+      background: radial-gradient(circle at top left, #f8fafc, #e2e8f0);
+    }
+
+    /* --- PREMIUM UI UTILS --- */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-3d {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4), 0 2px 4px -1px rgba(59, 130, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      position: relative;
+      top: 0;
+    }
+
+    .btn-3d:active {
+      top: 2px;
+      box-shadow: 0 1px 2px -1px rgba(59, 130, 246, 0.4), inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Input Floating Label Logic */
+    .floating-input-group {
+      position: relative;
+    }
+
+    .floating-input {
+      width: 100%;
+      padding: 1rem 0.75rem 0.25rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      outline: none;
+      transition: all 0.3s;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 0.95rem;
+    }
+
+    .floating-input:focus {
+      border-color: #3b82f6;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .floating-label {
+      position: absolute;
+      left: 0.75rem;
+      top: 0.8rem;
+      pointer-events: none;
+      transition: all 0.2s;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .floating-input:focus~.floating-label,
+    .floating-input:not(:placeholder-shown)~.floating-label {
+      top: 0.2rem;
+      font-size: 0.6rem;
+      color: #2563eb;
+    }
+
+    /* Dashed Border Animation */
+    .dashed-border-anim {
+      background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='8%2c 8' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+      transition: all 0.3s;
+    }
+
+    .dashed-border-anim:hover {
+      background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%233B82F6FF' stroke-width='2' stroke-dasharray='8%2c 8' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+      background-color: #eff6ff;
+    }
+
+    /* Dashboard Specific Drag Styles */
+    .drag-over {
+      /* Strong Dotted Border for Target */
+      outline: 2px dashed #3b82f6 !important;
+      outline-offset: -2px;
+      background-color: #eff6ff !important;
+      transform: scale(1.02);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Container Drop Zone specifically */
+    .items-container-droppable.drag-over-container {
+      background-color: #f0f9ff;
+      border-radius: 0.5rem;
+      box-shadow: inset 0 0 0 2px #3b82f6;
+    }
+
+    /* Loader */
+    .loader {
+      border: 3px solid #f1f5f9;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* --- RESTORED PRINT STYLES --- */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    @media print {
+
+      html,
+      body {
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        overflow: visible !important;
+        height: auto !important;
+      }
+
+      /* Hide Dashboard */
+      #dashboard-ui,
+      .no-print {
+        display: none !important;
+      }
+
+      /* Show Print Content */
+      #print-content {
+        display: block !important;
+      }
+
+      .page {
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-after: always;
+        page-break-inside: avoid;
+        width: 210mm !important;
+        height: 297mm !important;
+        overflow: hidden !important;
+      }
+
+
+    }
+
+
+    /* --- SCREEN STYLES --- */
+
+
+
+    /* --- SCREEN STYLES --- */
+    @media screen {
+      #print-content {
+        display: none !important;
+        /* Hidden on screen */
+      }
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      position: relative;
+      background-color: white;
+      overflow: hidden;
+    }
+
+    .page-bordered {
+      margin-bottom: 2rem;
+    }
+
+    /* Footer & Layout Utilities */
+    .footer-address-draft {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      z-index: 50;
+      text-align: center;
+      color: white;
+      font-size: 8.5pt;
+      line-height: 1.4;
+      padding-left: 10%;
+      padding-right: 10%;
+      bottom: 60px;
+    }
+
+    .footer-address-full {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      z-index: 50;
+      text-align: center;
+      color: white;
+      font-size: 8.5pt;
+      line-height: 1.4;
+      padding-left: 10%;
+      padding-right: 10%;
+      bottom: 15px;
+    }
+
+    .computer-generated-text {
+      position: absolute;
+      bottom: 135px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #4b5563;
+      z-index: 50;
+    }
+
+    .image-frame {
+      width: 75%;
+      max-width: 700px;
+      height: 350px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+
+    .image-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* QR Code */
+    .qr-image-container-absolute {
+      position: absolute;
+      top: 75px;
+      right: 75px;
+      width: 113.39px;
+      height: 113.39px;
+      border: 2px solid #9ca3af;
+      border-radius: 8px;
+      background-color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .qr-image-container-absolute img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+  <!-- ================= CONFIRMATION UI (Step 1) ================= -->
+  <div id="confirmation-ui" class="max-w-4xl mx-auto p-4 md:p-6 min-h-screen flex items-center justify-center">
+    <div class="glass-panel rounded-2xl p-8 w-full shadow-2xl relative overflow-hidden">
+      <!-- Decorative background blob -->
+      <div
+        class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob">
+      </div>
+      <div
+        class="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000">
+      </div>
+
+      <div class="relative z-10">
+        <div class="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+          <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Verify Details</h1>
+            <p class="text-slate-500 text-sm">Please review the data fetched from Zoho CRM before proceeding.</p>
+          </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="grid grid-cols-2 gap-x-6 gap-y-6 mb-8 text-sm">
+
+
+          <div class="col-span-2">
+            <div
+              class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Company Name</div>
+              <div id="conf-company_name" class="font-medium text-lg text-slate-800 break-words leading-tight"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Report Number</div>
+              <div id="conf-report_no" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Certificate Type
+              </div>
+              <div id="conf-cert_type" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Collection Date
+              </div>
+              <div id="conf-date_collection" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Destruction Date
+              </div>
+              <div id="conf-date_destruction" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div class="col-span-2">
+            <div
+              class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-1">Items Destroyed</div>
+              <div id="conf-items" class="font-medium text-slate-800 text-sm leading-relaxed"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Method</div>
+              <div id="conf-method" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Place of Destruction
+              </div>
+              <div id="conf-place" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Location of
+                Destruction
+              </div>
+              <div id="conf-location" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div id="container-person" class="hidden">
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Person In-Charge
+              </div>
+              <div id="conf-person" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div id="container-truck">
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Truck Number</div>
+              <div id="conf-truck" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div id="container-supervisor" class="hidden">
+            <div
+              class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">Project Supervisor
+              </div>
+              <div id="conf-supervisor" class="font-medium text-base text-slate-800 leading-tight"></div>
+            </div>
+          </div>
+
+          <div class="col-span-2">
+            <div
+              class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform">
+              <div class="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-1">Company Address</div>
+              <div id="conf-address" class="font-medium text-slate-700 text-sm text-justify leading-relaxed"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-between border-t border-slate-100 pt-6">
+        <div id="conf-loading" class="text-blue-600 text-sm font-semibold animate-pulse flex items-center gap-2">
+          <div class="loader" style="width:16px; height:16px; border-width: 2px;"></div> Fetching Data...
+        </div>
+        <button onclick="confirmAndProceed()" id="btn-confirm" disabled
+          class="btn-3d bg-slate-200 text-slate-400 px-8 py-3 rounded-xl font-bold tracking-wide transition-all uppercase cursor-not-allowed">
+          Confirm & Proceed
+        </button>
+      </div>
+
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= DASHBOARD UI (Screen Only) ================= -->
+  <div id="dashboard-ui" class="max-w-6xl mx-auto p-4 md:p-6 hidden">
+    <!-- Header -->
+    <div
+      class="glass-panel rounded-2xl p-4 mb-4 sticky top-2 z-50 flex flex-col md:flex-row justify-between items-center gap-4 relative">
+
+      <!-- Left: Back Button & Title -->
+      <div class="flex items-center justify-start w-full md:w-auto md:flex-1 gap-4">
+        <button onclick="goBack()"
+          class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-all shadow-sm border border-transparent hover:border-slate-200"
+          title="Back to Details">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+        <h1
+          class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-600 tracking-tight">
+          Document Generator</h1>
+      </div>
+
+      <!-- Right: Actions -->
+      <div class="flex items-center justify-end w-full md:w-auto md:flex-1 gap-4">
+        <div id="zoho-status"
+          class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-full text-xs font-bold uppercase tracking-wider flex items-center shadow-sm">
+          <span class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></span> Connecting...
+        </div>
+        <button onclick="generateAndPrint()"
+          class="btn-3d bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-xl hover:brightness-110 flex items-center gap-2 font-bold text-sm tracking-wide shadow-md transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          <span class="hidden md:inline">GENERATE PDF</span>
+          <span class="md:hidden">PRINT</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sections List -->
+    <div class="mb-4">
+      <div class="floating-input-group">
+        <input type="text" id="global-page-title" class="floating-input peer" placeholder=" "
+          oninput="updatePageTitle(this.value)">
+        <label for="global-page-title" class="floating-label">Page Title (Optional - Overrides Page 2 & 3
+          Headers)</label>
+      </div>
+    </div>
+
+    <div id="sections-container" class="space-y-4">
+      <!-- Sections will be injected here -->
+    </div>
+
+    <!-- Add Section Button -->
+    <div
+      class="dashed-border-anim rounded-2xl p-6 text-center cursor-pointer group mt-2 relative overflow-hidden transition-all"
+      onclick="addSection()">
+      <div class="relative z-10">
+        <div
+          class="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center mx-auto mb-2 text-2xl text-blue-500 group-hover:scale-110 transition duration-300">
+          +</div>
+        <h3 class="text-lg font-bold text-slate-600 group-hover:text-blue-600 transition">Add New Section</h3>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= PRINT CONTENT (Hidden on Screen) ================= -->
+  <!-- ================= PRINT CONTENT (Hidden on Screen) ================= -->
+  <div id="print-content" style="display:none;">
+
+    <!-- PAGE 1: Main Certificate -->
+    <div class="page page-bordered relative">
+      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <div class="qr-image-container-absolute z-10">
+        <img id="qr_image_1" src="" alt="QR">
+      </div>
+      <div class="pb-2 pt-0 w-full h-full relative z-10">
+        <div class="p-10 pt-20">
+          <header class="flex justify-center mb-8">
+            <img src="MMC_Main_Icon_Sq_TransBG.png" alt="MMC Logo" class="w-48">
+          </header>
+          <!-- ... Content ... -->
+          <main class="text-center text-black-600">
+            <h1 class="text-4xl font-black uppercase">Certificate</h1>
+            <h2 class="text-2xl font-bold uppercase my-2">of</h2>
+            <h1 id="certificate_type" class="text-4xl font-black uppercase"></h1>
+
+            <p class="text-lg mt-12 max-w-2xl mx-auto">
+              This document now certifies that the materials collected from
+            </p>
+            <p id="company_name_1" class="text-2xl font-bold my-4"></p>
+            <p id="sec_word2_mix" class="text-lg max-w-2xl mx-auto"></p>
+
+            <table class="mx-auto my-10 text-left text-lg">
+              <tbody>
+                <tr>
+                  <td id="pla_word1_mix" class="font-semibold pr-4"></td>
+                  <td class="font-semibold px-4">:</td>
+                  <td id="place_of_destruction_1"></td>
+                </tr>
+                <tr>
+                  <td id="item_word1_mix" class="font-semibold pr-4"></td>
+                  <td class="font-semibold px-4">:</td>
+                  <td id="items_destroyed_1"></td>
+                </tr>
+                <tr>
+                  <td class="font-semibold pr-4">Date of Collection</td>
+                  <td class="font-semibold px-4">:</td>
+                  <td id="date_of_collection_1"></td>
+                </tr>
+                <tr>
+                  <td id="date_word1_mix" class="font-semibold pr-4"></td>
+                  <td class="font-semibold px-4">:</td>
+                  <td id="date_of_destruction_1"></td>
+                </tr>
+                <tr>
+                  <td id="met_first_w1" class="font-semibold pr-4"></td>
+                  <td class="font-semibold px-4">:</td>
+                  <td id="method_of_destruction_1"></td>
+                </tr>
+                <tr>
+                  <td class="font-semibold pr-4">Report Number</td>
+                  <td class="font-semibold px-4">:</td>
+                  <td id="report_no"></td>
+                </tr>
+              </tbody>
+            </table>
+          </main>
+        </div>
+      </div>
+      <div class="computer-generated-text z-10">This is computer-generated document. No signature is required</div>
+      <div class="footer-address-draft z-10" style="bottom: 65px;">
+        <p>PMT 1278, Lorong PSPN 1, Penang Science Park North, 14100 Simpang Ampat, Pulau Pinang.</p>
+        <p>Tel: +604-5020 643 &nbsp;&nbsp; Mobile: +6011-2842 0236 &nbsp;&nbsp; Email: enquiries@mmcentury.com</p>
+        <p>www.mmcentury.com</p>
+      </div>
+    </div>
+
+    <!-- PAGE 2: Report -->
+    <div class="page page-bordered relative">
+      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <div class="pb-2 pt-4 w-full h-full relative z-10">
+        <div class="p-10 pt-20">
+          <header class="flex justify-center mb-8">
+            <img src="MMC_Main_Icon_Sq_TransBG.png" class="w-48">
+          </header>
+          <main class="text-center">
+            <h1 id="items_destroyed_2" class="text-3xl font-black uppercase"></h1>
+            <h1 id="certificate_type1" class="text-3xl font-black uppercase mt-2"></h1>
+
+            <h2 class="text-2xl font-bold uppercase my-12 pt-8">FOR</h2>
+            <p id="company_name_2_centered" class="text-2xl font-bold"></p>
+
+            <h2 id="secondpage_w2" class="text-2xl font-bold uppercase my-12 pt-8"></h2>
+
+            <p class="text-2xl font-bold">MM CENTURY SDN. BHD.</p>
+            <p class="text-xl font-semibold">201101002965 (931103-X)</p>
+          </main>
+        </div>
+      </div>
+      <div class="computer-generated-text z-10">This is computer-generated document. No signature is required</div>
+      <div class="footer-address-draft z-10" style="bottom: 65px;">
+        <p>PMT 1278, Lorong PSPN 1, Penang Science Park North, 14100 Simpang Ampat, Pulau Pinang.</p>
+        <p>Tel: +604-5020 643 &nbsp;&nbsp; Mobile: +6011-2842 0236 &nbsp;&nbsp; Email: enquiries@mmcentury.com</p>
+        <p>www.mmcentury.com</p>
+      </div>
+    </div>
+
+    <!-- PAGE 3: Overview -->
+    <div class="page page-bordered relative">
+      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <div class="pb-2 pt-18 w-full h-full relative z-10">
+        <div class="p-10 pt-20">
+          <main class="text-left px-12">
+            <h1 id="thirdPage" class="text-3xl font-black uppercase text-center"
+              style="margin-top:20px; margin-bottom: 20px;"></h1>
+            <h2 class="text-2xl font-bold uppercase mb-4">OVERVIEW</h2>
+            <p id="overview_rd_page" class="text-lg max-w-2xl mb-6"></p>
+
+            <table class="mb-4 text-left text-lg w-full">
+              <tbody>
+                <tr class="align-top">
+                  <td class="font-semibold w-1/3 pb-2">Company Name</td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="company_name_4" class="pb-2"></td>
+                </tr>
+                <tr class="align-top">
+                  <td class="font-semibold pb-2">Company Address</td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="company_address_3" class="pb-2"></td>
+                </tr>
+
+                <!-- Moved PIC here -->
+                <tr id="row-person" class="hidden align-top">
+                  <td class="font-semibold pb-2">Details of PIC</td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="val-person" class="pb-2"></td>
+                </tr>
+
+                <tr class="align-top">
+                  <td id="third_w2" class="font-semibold pb-2"></td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="disposed_item_3" class="pb-2"></td>
+                </tr>
+                <tr class="align-top">
+                  <td class="font-semibold pb-2">Quantity of Item</td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="quantity_of_item_3" class="pb-2"></td>
+                </tr>
+
+                <!-- Moved Truck here -->
+                <tr id="row-truck" class="hidden align-top">
+                  <td class="font-semibold pb-2">Truck Number</td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="val-truck" class="pb-2"></td>
+                </tr>
+
+                <!-- Moved Supervisor here -->
+                <tr id="row-supervisor" class="hidden align-top">
+                  <td class="font-semibold pb-2">Project Supervisor</td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="val-supervisor" class="pb-2"></td>
+                </tr>
+
+                <tr class="align-top">
+                  <td id="loc_third_w1" class="font-semibold pb-2"></td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="location_of_destruction_3" class="pb-2"></td>
+                </tr>
+                <tr class="align-top">
+                  <td id="met_third_w1" class="font-semibold pb-2"></td>
+                  <td class="px-4 pb-2">:</td>
+                  <td id="method_of_destruction_3" class="pb-2"></td>
+                </tr>
+              </tbody>
+            </table>
+          </main>
+        </div>
+      </div>
+      <div class="computer-generated-text z-10">This is computer-generated document. No signature is required</div>
+      <div class="footer-address-draft z-10" style="bottom: 65px;">
+        <p>PMT 1278, Lorong PSPN 1, Penang Science Park North, 14100 Simpang Ampat, Pulau Pinang.</p>
+        <p>Tel: +604-5020 643 &nbsp;&nbsp; Mobile: +6011-2842 0236 &nbsp;&nbsp; Email: enquiries@mmcentury.com</p>
+        <p>www.mmcentury.com</p>
+      </div>
+    </div>
+
+    <!-- DYNAMIC CONTENT CONTAINER -->
+    <div id="dynamic-pages-container"></div>
+
+
+    <!-- PAGE 4: Disclaimer -->
+    <div class="page relative">
+      <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <div class="w-full h-full relative p-10 z-10">
+        <div class="flex justify-center mt-24">
+          <img src="MMC_Main_Icon_Sq_TransBG.png" class="w-48">
+        </div>
+        <h1 class="text-center text-3xl font-bold mb-8">-DISCLAIMER-</h1>
+        <p class="text-md leading-9 text-gray-700 mb-6 text-justify">
+          This certificate and its accompanying report are issued by MM Century Sdn. Bhd. and certify that the listed
+          materials were securely collected, processed, destroyed, disposed and/or dismantled in accordance with
+          recognized regulatory, environmental, and data security standards. The information presented herein is based
+          on the data provided by the client and has been verified to the best extent practicable during the collection,
+          weighing, destruction, disposal, and/or dismantling processes.
+        </p>
+        <p class="text-md leading-9 text-gray-700 mb-6 text-justify">
+          This certificate is valid solely for the specific materials, quantities, methods, and dates stated in this
+          document. MM Century Sdn. Bhd. shall not be held liable for any inaccuracies resulting from incomplete or
+          incorrect information supplied by the client, nor for any misuse, alteration, reproduction, or interpretation
+          of this document by unauthorized parties. Any further use of this certificate beyond its intended compliance,
+          audit, or regulatory reference is strictly prohibited unless expressly approved in writing by MM Century Sdn.
+          Bhd.
+        </p>
+        <div class="computer-generated-text" style="bottom: 100px;">This is computer-generated document. No signature is
+          required</div>
+        <div class="footer-address-full">
+          <p>PMT 1278, Lorong PSPN 1, Penang Science Park North, 14100 Simpang Ampat, Pulau Pinang.</p>
+          <p>Tel: +604-5020 643 &nbsp;&nbsp; Mobile: +6011-2842 0236 &nbsp;&nbsp; Email: enquiries@mmcentury.com</p>
+          <p>www.mmcentury.com</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <script>
+    /* ================= STATE MANAGEMENT ================= */
+    // Section Structure: { id, heading, items: [ { type: 'image'|'pdf', src: base64, fileType: 'pdf'|'image' } ] }
+    let sections = [];
+
+    function uniqueId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    /* ================= DASHBOARD RENDERING (View) ================= */
+    function renderDashboard() {
+      const container = document.getElementById('sections-container');
+      container.innerHTML = '';
+
+      sections.forEach((section, index) => {
+        const sectionEl = document.createElement('div');
+        // Card Style: Compact padding (p-4 vs p-6) and margin (mb-4 vs mb-6)
+        sectionEl.className = 'glass-panel rounded-2xl overflow-hidden transition-all duration-300 card-hover mb-4';
+        sectionEl.draggable = true;
+
+        // Drag Events for Reordering Sections
+        sectionEl.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', index);
+          e.target.style.opacity = '0.7';
+          e.target.style.transform = 'scale(0.98)';
+        };
+        sectionEl.ondragover = (e) => {
+          e.preventDefault();
+          sectionEl.classList.add('drag-over');
+        };
+        sectionEl.ondragleave = () => sectionEl.classList.remove('drag-over');
+        sectionEl.ondrop = (e) => {
+          e.preventDefault();
+          sectionEl.classList.remove('drag-over');
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'scale(1)';
+
+          const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+          if (fromIndex !== index) {
+            // Swap
+            const movedItem = sections.splice(fromIndex, 1)[0];
+            sections.splice(index, 0, movedItem);
+            renderDashboard();
+          }
+        };
+        sectionEl.ondragend = (e) => {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'scale(1)';
+        };
+
+        // Section Header (Compact p-3, added Arrows)
+        const headerHtml = `
+                    <div class="bg-gradient-to-r from-slate-50 to-white p-3 border-b border-white/50 flex justify-between items-center handle cursor-grab active:cursor-grabbing group">
+                        <div class="flex items-center gap-3 flex-1">
+                            <!-- Helper Arrows for Easy Moving -->
+                            <div class="flex flex-col gap-0.5" onmousedown="event.stopPropagation()">
+                                <button type="button" onclick="event.stopPropagation(); moveSection('${section.id}', -1)" 
+                                    class="text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-sm p-0.5 transition ${index === 0 ? 'opacity-25 pointer-events-none' : ''}" title="Move Up">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                                </button>
+                                <button type="button" onclick="event.stopPropagation(); moveSection('${section.id}', 1)" 
+                                    class="text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-sm p-0.5 transition ${index === sections.length - 1 ? 'opacity-25 pointer-events-none' : ''}" title="Move Down">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                            </div>
+
+                            <div class="p-1.5 bg-white rounded-lg shadow-sm text-slate-300 group-hover:text-primary-500 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            </div>
+                            <div class="flex-1 floating-input-group max-w-lg">
+                                <input type="text" value="${section.heading}" 
+                                    id="heading-${section.id}"
+                                    onchange="updateSectionHeading('${section.id}', this.value)"
+                                    class="floating-input text-sm font-semibold" 
+                                    style="padding-top: 1.1rem; padding-bottom: 0.3rem;"
+                                    placeholder=" ">
+                                <label for="heading-${section.id}" class="floating-label">Section Name</label>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="removeSection('${section.id}')" class="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+        // Items Grid (Smaller Items: 3 cols -> 8 cols max)
+        let itemsHtml = '';
+        if (section.items.length > 0) {
+          itemsHtml = `<div class="p-4 grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-4" ondragover="event.preventDefault()">`;
+          section.items.forEach((item, itemIdx) => {
+            // Updated Item Card Style: padding-1
+            itemsHtml += `
+                            <div class="relative group aspect-[3/4] bg-white rounded-lg overflow-hidden shadow-sm border border-slate-100 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-1 block"
+                                 draggable="true"
+                                 ondragstart="handleItemDragStart(event, '${section.id}', ${itemIdx})"
+                                 ondragover="handleItemDragOver(event)"
+                                 ondrop="handleItemDrop(event, '${section.id}', ${itemIdx})">
+                                
+                                <img src="${item.src}" class="w-full h-full object-contain pointer-events-none p-1"> 
+                                
+                                <!-- Hover Overlay for Actions -->
+                                <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-all duration-300 flex items-start justify-end p-1">
+                                     <button onclick="removeItem('${section.id}', ${itemIdx})" class="bg-white text-red-500 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md hover:bg-red-50 transition-all transform scale-90 group-hover:scale-100">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                     </button>
+                                </div>
+                                
+                                <!-- Badge -->
+                                <div class="absolute bottom-1 left-1 right-1 bg-white/90 backdrop-blur text-slate-600 text-[9px] font-bold py-0.5 px-1 rounded text-center shadow-sm border border-white/50 truncate">
+                                    ${item.type === 'pdf' ? 'PDF ' + (itemIdx + 1) : 'IMG ' + (itemIdx + 1)}
+                                </div>
+                            </div>
+                         `;
+          });
+          itemsHtml += `</div>`;
+        } else {
+          itemsHtml = `
+                        <div class="p-8 text-center bg-slate-50/50 m-4 rounded-xl border-2 border-dashed border-slate-200">
+                            <div class="text-3xl mb-2 opacity-50">📂</div>
+                            <p class="text-slate-500 font-medium text-sm">Empty section</p>
+                        </div>
+                    `;
+        }
+
+        // Upload Actions
+        const actionsHtml = `
+                    <div class="px-4 py-2 bg-slate-50/50 border-t border-slate-100 flex gap-4 items-center">
+                         <label class="cursor-pointer group relative overflow-hidden bg-white text-blue-600 border border-blue-100 px-4 py-2 rounded-lg text-xs font-bold btn-3d flex items-center gap-2 hover:bg-blue-50 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:-translate-y-0.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <span>UPLOAD</span>
+                            <div class="absolute inset-0 bg-blue-100/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                            <input type="file" multiple accept="image/*,application/pdf" class="hidden" onchange="handleUpload('${section.id}', this.files)">
+                        </label>
+                        <div class="flex-1"></div>
+                        <div id="loader-${section.id}" class="hidden flex items-center gap-2 text-xs text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">
+                            <div class="loader" style="width:14px; height:14px; border-width:2px;"></div> 
+                            <span class="font-medium animate-pulse">Processing...</span>
+                        </div>
+                    </div>
+                `;
+
+        sectionEl.innerHTML = headerHtml + itemsHtml + actionsHtml;
+        container.appendChild(sectionEl);
+      });
+
+      if (sections.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <div class="inline-block p-6 rounded-full bg-indigo-50 mb-4 animate-bounce">
+                    <span class="text-4xl">✨</span>
+                </div>
+                <h3 class="text-xl font-bold text-slate-700">Ready to create?</h3>
+                <p class="text-slate-500 mt-2">Click below to add a section.</p>
+            </div>
+        `;
+      }
+    }
+
+    /* ================= LOGIC: Add/Edit/Delete ================= */
+    function addSection() {
+      sections.push({
+        id: uniqueId(),
+        heading: "",
+        items: []
+      });
+      renderDashboard();
+    }
+
+    function removeSection(id) {
+      if (confirm('Delete this entire section?')) {
+        sections = sections.filter(s => s.id !== id);
+        renderDashboard();
+      }
+    }
+
+    function moveSection(id, direction) {
+      const index = sections.findIndex(s => s.id === id);
+      if (index === -1) return;
+
+      const newIndex = index + direction;
+      // Bounds check
+      if (newIndex < 0 || newIndex >= sections.length) return;
+
+      // Swap
+      const temp = sections[index];
+      sections[index] = sections[newIndex];
+      sections[newIndex] = temp;
+
+      renderDashboard();
+    }
+
+    function updateSectionHeading(id, value) {
+      const s = sections.find(x => x.id === id);
+      if (s) s.heading = value;
+    }
+
+    function removeItem(sectionId, index) {
+      const s = sections.find(x => x.id === sectionId);
+      if (s) {
+        s.items.splice(index, 1);
+        renderDashboard();
+      }
+    }
+
+    /* ================= LOGIC: Item Drag & Drop ================= */
+    let draggedItem = null; // Store metadata: { sectionId, index }
+
+    function handleItemDragStart(e, sectionId, index) {
+      e.dataTransfer.effectAllowed = 'move';
+      // We use a custom object or JSON to track cross-section or same-section logic
+      // For simplicity, we can just use the global variable or JSON string
+      draggedItem = { sectionId, index };
+      e.dataTransfer.setData('application/json', JSON.stringify(draggedItem));
+      e.stopPropagation(); // Prevent Section Drag Validation
+    }
+
+    function handleItemDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      // Visual feedback handled by CSS :hover or manually if needed, but 'drag-over' class on item can be cleaner
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    // Add drag leave to remove style
+    function handleItemDrop(e, targetSectionId, targetIndex) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+
+      const data = e.dataTransfer.getData('application/json');
+      if (!data) return;
+
+      const source = JSON.parse(data);
+      const sourceSection = sections.find(s => s.id === source.sectionId);
+      const targetSection = sections.find(s => s.id === targetSectionId);
+
+      if (sourceSection && targetSection) {
+        const itemToMove = sourceSection.items[source.index];
+        // Remove from source
+        sourceSection.items.splice(source.index, 1);
+
+        // Adjust index if same section
+        let actualTargetIndex = targetIndex;
+        if (source.sectionId === targetSectionId && source.index < targetIndex) {
+          actualTargetIndex--;
+        }
+
+        // Insert at target
+        targetSection.items.splice(actualTargetIndex, 0, itemToMove);
+        renderDashboard();
+      }
+      draggedItem = null;
+    }
+
+    // --- NEW: Container Drop Handlers (Drop to Last) ---
+    function handleContainerDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      e.currentTarget.classList.add('drag-over-container');
+    }
+
+    function handleContainerDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over-container');
+    }
+
+    function handleContainerDrop(e, targetSectionId) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over-container');
+
+      // If we dropped on a specific item, stopPropagation stopped this from firing.
+      // So if this fires, it means we dropped in the empty space of the container.
+
+      const data = e.dataTransfer.getData('application/json');
+      if (!data) return;
+
+      const source = JSON.parse(data);
+      const sourceSection = sections.find(s => s.id === source.sectionId);
+      const targetSection = sections.find(s => s.id === targetSectionId);
+
+      if (sourceSection && targetSection) {
+        // Check if we are essentially moving to the same place (already at end)
+        // But simplify: just move to end.
+        if (source.sectionId === targetSectionId && source.index === sourceSection.items.length - 1) {
+          return; // Already at end
+        }
+
+        const itemToMove = sourceSection.items[source.index];
+        sourceSection.items.splice(source.index, 1);
+
+        // Push to end
+        targetSection.items.push(itemToMove);
+        renderDashboard();
+      }
+      draggedItem = null;
+    }
+
+    /* ================= LOGIC: Upload & PDF Processing ================= */
+    async function handleUpload(sectionId, fileList) {
+      const s = sections.find(x => x.id === sectionId);
+      if (!s) return;
+
+      const loader = document.getElementById(`loader-${sectionId}`);
+      if (loader) loader.classList.remove('hidden');
+
+      try {
+        for (const file of fileList) {
+          if (file.type === 'application/pdf') {
+            const pdfPages = await processPDF(file);
+            s.items.push(...pdfPages);
+          } else if (file.type.startsWith('image/')) {
+            const base64 = await toBase64(file);
+            s.items.push({ type: 'image', src: base64, fileType: 'image' });
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Error processing files: " + e.message);
+      } finally {
+        if (loader) loader.classList.add('hidden');
+        renderDashboard();
+      }
+    }
+
+    async function processPDF(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      const pages = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for high quality
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        pages.push({
+          type: 'pdf', // Treat as PDF page
+          src: canvas.toDataURL('image/jpeg', 0.8),
+          fileType: 'pdf'
+        });
+      }
+      return pages;
+    }
+
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    /* ================= PRINT GENERATION ================= */
+    function generateAndPrint() {
+      const container = document.getElementById("dynamic-pages-container");
+      container.innerHTML = "";
+
+      // Loop through sections and create pages
+      sections.forEach(section => {
+        if (section.items.length === 0) return;
+
+        // Determine if this is a "PDF Section" or "Image Section" 
+        // Currently mixed usage is allowed, but we treat them per item or chunked.
+        // Constraint: Images are 2 per page. PDF pages are 1 per page.
+
+        // Strategy: Group items by processing requirement
+        // But simplified: Just iterate and fill pages.
+
+        let currentChunk = [];
+
+        section.items.forEach(item => {
+          if (item.fileType === 'pdf') {
+            // PDF Pages get their own page (Full Size)
+            if (currentChunk.length > 0) {
+              renderChunk(container, section.heading, currentChunk);
+              currentChunk = [];
+            }
+            renderFullPage(container, section.heading, item.src);
+          } else {
+            // Images get chunked (2 per page)
+            currentChunk.push(item);
+            if (currentChunk.length === 2) {
+              renderChunk(container, section.heading, currentChunk);
+              currentChunk = [];
+            }
+          }
+        });
+
+        // Render remaining images
+        if (currentChunk.length > 0) {
+          renderChunk(container, section.heading, currentChunk);
+        }
+      });
+
+      // Add Page Numbers
+      addPageNumbers();
+
+      // Trigger Print
+      setTimeout(() => window.print(), 500);
+    }
+
+    function renderChunk(container, heading, items) {
+      const img1 = items[0]?.src;
+      const img2 = items[1]?.src;
+
+      const page = document.createElement("div");
+      page.className = "page relative";
+      // Replaced CSS background with IMG tag
+      page.innerHTML = `
+                <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+                <div class="w-full h-full relative z-10">
+                    <div class="pt-36 text-center">
+                        <h1 class="text-2xl font-black uppercase mb-6">${heading || ""}</h1>
+                    </div>
+                    <div class="flex flex-col items-center gap-8 w-full px-8 pb-32">
+                         <div class="image-frame"><img src="${img1}" /></div>
+                         ${img2 ? `<div class="image-frame"><img src="${img2}" /></div>` : ""}
+                    </div>
+                    <div class="footer-address-full">
+                        <p>PMT 1278, Lorong PSPN 1, Penang Science Park North, 14100 Simpang Ampat, Pulau Pinang.</p>
+                        <p>Tel: +604-5020 643 &nbsp;&nbsp; Mobile: +6011-2842 0236 &nbsp;&nbsp; Email: enquiries@mmcentury.com</p>
+                        <p>www.mmcentury.com</p>
+                    </div>
+                </div>
+            `;
+      container.appendChild(page);
+    }
+
+    function renderFullPage(container, heading, src) {
+      const page = document.createElement("div");
+      page.className = "page relative";
+
+      // Replaced CSS background with IMG tag
+      // PDF Page Logic:
+      // 1. Background Image (Header/Footer design) at Bottom (z-0)
+      // 2. PDF Content Image in Middle (z-5) - transparent background by default, but we added white bg to img
+      // 3. Text Overlays (Header text, Footer text) on Top (z-10)
+
+      page.innerHTML = `
+                <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+
+                <div class="w-full h-full relative z-10">
+                     <!-- Header Text Overlay (Moved BELOW the SVG Header) -->
+                     <div class="absolute top-32 left-0 w-full flex justify-center items-center pt-4">
+                         <h1 class="text-2xl font-black uppercase text-center px-4">${heading || ""}</h1>
+                     </div>
+
+                    <!-- PDF Content Image -->
+                    <!-- Increased padding-top to pt-48 (approx 192px) to clear the Header + Heading -->
+                    <div class="absolute inset-0 pt-48 pb-24 px-10 flex items-center justify-center pointer-events-none">
+                        <!-- BG White on image ensures it covers the background lines if any, but we want it 'behind' the text overlays optionally?
+                             The text overlays above are transparent containers text-only. -->
+                        <img src="${src}" class="w-full h-full object-contain shadow-sm bg-white">
+                    </div>
+
+                    <!-- Footer Text Overlay (on top of the SVG Footer) -->
+                     <div class="footer-address-full">
+                        <p>PMT 1278, Lorong PSPN 1, Penang Science Park North, 14100 Simpang Ampat, Pulau Pinang.</p>
+                        <p>Tel: +604-5020 643 &nbsp;&nbsp; Mobile: +6011-2842 0236 &nbsp;&nbsp; Email: enquiries@mmcentury.com</p>
+                        <p>www.mmcentury.com</p>
+                    </div>
+                </div>
+            `;
+      container.appendChild(page);
+    }
+
+    function addPageNumbers() {
+      // Select ALL pages in the print content (Static + Dynamic) to ensure continuous numbering from Page 1
+      const pages = document.querySelectorAll('#print-content .page');
+      const total = pages.length;
+      pages.forEach((page, index) => {
+        // Check if number already exists to avoid duplicates if re-rendered
+        const existing = page.querySelector('.page-number');
+        if (existing) existing.remove();
+
+        const num = document.createElement('div');
+        // Changed text color to white as requested ("white bright")
+        num.className = "page-number absolute bottom-2 right-4 text-xs text-white font-bold z-50";
+        num.innerText = `Page ${index + 1} of ${total}`;
+        page.appendChild(num);
+      });
+    }
+
+    /* ================= ZOHO INTEGRATION ================= */
+    // Helper utils (Updated for Inputs/Textarea)
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = text || "";
+        else el.textContent = text || "";
+      }
+    }
+    function setHTML(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html || ""; }
+
+    // --- Verified Defaults for Fallback ---
+    let defaultTitlePage2 = "";
+    let defaultTitlePage3 = "";
+
+    function updatePageTitle(val) {
+      const v = (val || "").trim();
+      if (!v) {
+        // Fallback
+        setText("items_destroyed_2", defaultTitlePage2);
+        setText("thirdPage", defaultTitlePage3);
+      } else {
+        // Use custom
+        setText("items_destroyed_2", v);
+        setText("thirdPage", v);
+      }
+    }
+
+    function syncData(targetIds, val) {
+      if (!Array.isArray(targetIds)) targetIds = [targetIds];
+      targetIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = val;
+          else el.textContent = val;
+        }
+      });
+    }
+
+    ZOHO.embeddedApp.on("PageLoad", function (getParams) {
+
+      // Update UI status
+      const statusEl = document.getElementById('zoho-status');
+      if (statusEl) {
+        statusEl.innerHTML = '<span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span> Connected to Zoho';
+        statusEl.classList.remove('text-gray-500');
+        statusEl.classList.add('text-green-600');
+      }
+
+      if (!getParams?.EntityId?.length) return;
+
+      const recordId = getParams.EntityId[0];
+      const funcName = "Preview_Merge_File"; // Deluge Function
+      const req = {
+        arguments: JSON.stringify({ Estimate_id: recordId })
+      };
+
+      ZOHO.CRM.FUNCTIONS.execute(funcName, req).then(response => {
+        if (!response.details || !response.details.output) {
+          console.error("Invalid response from Zoho Function");
+          alert("Could not fetch data from Zoho. Please check the logs.");
+          return;
+        }
+
+        const result = JSON.parse(response.details.output);
+
+        // --- LOGIC IMPLEMENTATION (Updated for Backend Logic) ---
+
+        // 1. Place of Destruction
+        // Backend now handles the "Others" logic and returns the correct string in 'place_of_destruction'.
+        let finalPlace = result.place_of_destruction || result.cf_place_of_destruction || "";
+        if (finalPlace === "Others" && result.cf_test_place_of_destruction) {
+          finalPlace = result.cf_test_place_of_destruction;
+        }
+
+        // 2. Address Type
+        // Backend now handles the Company/Collection address switch and returns the correct string in 'company_address'.
+        // We use that directly.
+        let finalAddress = result.company_address || "";
+
+        // 3. Location of Destruction
+        // Backend should return 'location_of_destruction' with the correct value.
+        let finalLocation = result.location_of_destruction || result.cf_location_of_destruction || "";
+        // Safety Fallback: If backend logic didn't trigger or we verify "Others"
+        if (finalLocation === "Others" && result.cf_test_location_of_destructio) {
+          finalLocation = result.cf_test_location_of_destructio;
+        }
+
+        // 4, 5, 6. Optional Fields
+        const personInCharge = result.cf_details_of_the_person_in_charge || "";
+        const truckNumber = result.cf_truck_number || "";
+        const projectSupervisor = result.cf_project_supervisor || "";
+
+
+        // Populate Confirmation UI
+        setText("conf-company_name", result.company_name);
+        setText("conf-report_no", result.report_no);
+        setText("conf-cert_type", (result.word_1 || "") + " Report");
+        setText("conf-date_collection", result.date_of_collection);
+        setText("conf-date_destruction", result.date_of_destruction);
+        setText("conf-items", result.items_destroyed);
+        setText("conf-method", result.method_of_destruction);
+
+        // New/Updated Fields in Confirmation UI
+        setText("conf-place", finalPlace);
+        setText("conf-location", finalLocation);
+        setText("conf-address", finalAddress);
+
+        // Toggle Optional Fields in Verify UI
+        if (personInCharge) {
+          setText("conf-person", personInCharge);
+          document.getElementById("container-person").classList.remove("hidden");
+        } else {
+          document.getElementById("container-person").classList.add("hidden");
+        }
+
+        if (truckNumber) {
+          setText("conf-truck", truckNumber);
+          document.getElementById("container-truck").classList.remove("hidden");
+        } else {
+          document.getElementById("container-truck").classList.add("hidden");
+        }
+
+        if (projectSupervisor) {
+          setText("conf-supervisor", projectSupervisor);
+          document.getElementById("container-supervisor").classList.remove("hidden");
+        } else {
+          document.getElementById("container-supervisor").classList.add("hidden");
+        }
+
+        // Enable Confirm Button
+        const btn = document.getElementById('btn-confirm');
+        const loader = document.getElementById('conf-loading');
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+          btn.classList.add('bg-blue-600', 'text-white', 'hover:brightness-110');
+        }
+        if (loader) loader.classList.add('hidden');
+
+
+        // --- Mapping Data to HTML (Exact same fields as source) ---
+        setText("company_name_1", result.company_name);
+        setText("place_of_destruction_1", result.place_of_destruction);
+        setText("items_destroyed_1", result.items_destroyed);
+        setText("date_of_collection_1", result.date_of_collection);
+        setText("date_of_destruction_1", result.date_of_destruction);
+        setText("method_of_destruction_1", result.method_of_destruction);
+
+        setText("items_destroyed_2", result.items_destroyed);
+        defaultTitlePage2 = result.items_destroyed || "";
+        setText("certificate_type1", (result.word_1 || "") + " Report");
+        setText("company_name_2_centered", result.company_name);
+        setText("report_no", result.report_no);
+
+        // QR Code
+        const qrImageEl = document.getElementById("qr_image_1");
+        if (qrImageEl && result.qr_code_url) {
+          qrImageEl.src = result.qr_code_url;
+        }
+
+        setText("company_name_4", result.company_name);
+        setHTML("company_address_3", (finalAddress || '').replace(/\\n/g, "<br>").replace(/\n/g, "<br>").replace(/\/n/g, "<br>"));
+        setText("disposed_item_3", result.disposed_item);
+        setText("certificate_type", result.word_1);
+        setHTML("quantity_of_item_3", (result.quantity_of_item || '').replace(/\n/g, "<br>"));
+        setHTML("location_of_destruction_3", (finalLocation || '').replace(/\n/g, "<br>"));
+        setText("method_of_destruction_3", result.method_of_destruction);
+
+        // Update Page 1 Place as well? 
+        // Requirement 1 said "Place of Destruction". Page 1 has "place_of_destruction_1". 
+        // Let's update it to use the calculated 'finalPlace' just in case.
+        setText("place_of_destruction_1", finalPlace);
+
+        // Update Overview Page Optional Fields
+        if (personInCharge) {
+          setText("val-person", personInCharge);
+          document.getElementById("row-person").classList.remove("hidden");
+        } else {
+          document.getElementById("row-person").classList.add("hidden");
+        }
+
+        if (truckNumber) {
+          setText("val-truck", truckNumber);
+          document.getElementById("row-truck").classList.remove("hidden");
+        } else {
+          document.getElementById("row-truck").classList.add("hidden");
+        }
+
+        if (projectSupervisor) {
+          setText("val-supervisor", projectSupervisor);
+          document.getElementById("row-supervisor").classList.remove("hidden");
+        } else {
+          document.getElementById("row-supervisor").classList.add("hidden");
+        }
+
+        // Labels mapping
+        const p3Title = `${result.items_destroyed || ''} ${result.word_1 || ''} Report`;
+        setText("thirdPage", p3Title);
+        defaultTitlePage3 = p3Title;
+        setText("sec_word2_mix", `was securely ${result.word_2 || ''} accordingly`);
+        setText("pla_word1_mix", `Place of ${result.word_1 || ''}`);
+        setText("date_word1_mix", `Date of ${result.word_1 || ''}`);
+        setText("method_word1_mix", `Method of ${result.word_1 || ''}`);
+        setText("item_word1_mix", `Items ${result.word_2 || ''}`);
+        setText("secondpage_w2", `${result.word_2 || ''} BY`);
+        setText("third_w2", `${result.word_2 || ''} Item`);
+        setText("loc_third_w1", `Location of ${result.word_1 || ''}`);
+        setText("met_third_w1", `Method of ${result.word_1 || ''}`);
+        setText("met_first_w1", `Method of ${result.word_1 || ''}`);
+
+        // Overview Text Logic
+        const scopeType = result.word_3 || '';
+        const processType = result.word_1 || '';
+        const itemName = result.disposed_item || '';
+        const company = result.company_name || '';
+        const disposedPrefix = "was securely";
+        const disposedWord = result.word_2 || '';
+        const date = result.date_of_destruction || '';
+
+        let overviewText = `This report certifies that the <strong>${scopeType}</strong> <strong>${processType}</strong> of the <strong>${itemName}</strong> collected from <strong>${company}</strong>`;
+
+        if (disposedWord && date) {
+          overviewText += ` ${disposedPrefix} <strong>${disposedWord}</strong> on <strong>${date}</strong> at a designed premise.`;
+        }
+        setHTML("overview_rd_page", overviewText);
+      });
+    });
+
+    ZOHO.embeddedApp.init();
+
+    // Init with one empty section
+    addSection();
+
+    function confirmAndProceed() {
+      document.getElementById('confirmation-ui').classList.add('hidden');
+      document.getElementById('dashboard-ui').classList.remove('hidden');
+      setTimeout(() => document.getElementById('global-page-title').focus(), 100);
+    }
+
+    function goBack() {
+      document.getElementById('dashboard-ui').classList.add('hidden');
+      document.getElementById('confirmation-ui').classList.remove('hidden');
+    }
+  </script>
+</body>
+
+</html>
