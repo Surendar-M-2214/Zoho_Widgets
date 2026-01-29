@@ -715,59 +715,59 @@
             <h2 class="text-2xl font-bold uppercase mb-4">OVERVIEW</h2>
             <p id="overview_rd_page" class="text-lg max-w-2xl mb-6"></p>
 
-            <table class="mb-4 text-left text-lg w-full">
+            <table class="mb-4 text-left text-lg w-full [&_td:first-child]:whitespace-nowrap">
               <tbody>
                 <tr class="align-top">
-                  <td class="font-semibold w-1/3 pb-2">Company Name</td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="font-semibold pb-2">Company Name</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="company_name_4" class="pb-2"></td>
                 </tr>
                 <tr class="align-top">
                   <td class="font-semibold pb-2">Company Address</td>
-                  <td class="px-4 pb-2">:</td>
-                  <td id="company_address_3" class="pb-2"></td>
+                  <td class="px-2 pb-2">:</td>
+                  <td id="company_address_3" class="pb-2 text-justify"></td>
                 </tr>
 
                 <!-- Moved PIC here -->
                 <tr id="row-person" class="hidden align-top">
                   <td class="font-semibold pb-2">Details of PIC</td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="val-person" class="pb-2"></td>
                 </tr>
 
                 <tr class="align-top">
                   <td id="third_w2" class="font-semibold pb-2"></td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="disposed_item_3" class="pb-2"></td>
                 </tr>
                 <tr class="align-top">
                   <td class="font-semibold pb-2">Quantity of Item</td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="quantity_of_item_3" class="pb-2"></td>
                 </tr>
 
                 <!-- Moved Truck here -->
                 <tr id="row-truck" class="hidden align-top">
                   <td class="font-semibold pb-2">Truck Number</td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="val-truck" class="pb-2"></td>
                 </tr>
 
                 <!-- Moved Supervisor here -->
                 <tr id="row-supervisor" class="hidden align-top">
                   <td class="font-semibold pb-2">Project Supervisor</td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="val-supervisor" class="pb-2"></td>
                 </tr>
 
                 <tr class="align-top">
                   <td id="loc_third_w1" class="font-semibold pb-2"></td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="location_of_destruction_3" class="pb-2"></td>
                 </tr>
                 <tr class="align-top">
                   <td id="met_third_w1" class="font-semibold pb-2"></td>
-                  <td class="px-4 pb-2">:</td>
+                  <td class="px-2 pb-2">:</td>
                   <td id="method_of_destruction_3" class="pb-2"></td>
                 </tr>
               </tbody>
@@ -1609,7 +1609,7 @@
         }
 
         setText("company_name_4", result.company_name);
-        setHTML("company_address_3", (finalAddress || '').replace(/\\n/g, "<br>").replace(/\n/g, "<br>").replace(/\/n/g, "<br>"));
+        setHTML("company_address_3", (finalAddress || '').replace(/\\n/g, ", ").replace(/\n/g, ", ").replace(/\/n/g, ", "));
         setText("disposed_item_3", result.disposed_item);
         setText("certificate_type", result.word_1);
         setHTML("quantity_of_item_3", (result.quantity_of_item || '').replace(/\n/g, "<br>"));
@@ -1648,15 +1648,15 @@
         setText("thirdPage", p3Title);
         defaultTitlePage3 = p3Title;
         setText("sec_word2_mix", `was securely ${result.word_2 || ''} accordingly`);
-        setText("pla_word1_mix", `Place of ${result.word_1 || ''}`);
-        setText("date_word1_mix", `Date of ${result.word_1 || ''}`);
-        setText("method_word1_mix", `Method of ${result.word_1 || ''}`);
+        setText("pla_word1_mix", `Place of ${result.word_1 || 'Destruction'}`);
+        setText("date_word1_mix", `Date of ${result.word_1 || 'Destruction'}`);
+        setText("method_word1_mix", `Method of ${result.word_1 || 'Destruction'}`);
         setText("item_word1_mix", `Items ${result.word_2 || ''}`);
         setText("secondpage_w2", `${result.word_2 || ''} BY`);
         setText("third_w2", `${result.word_2 || ''} Item`);
-        setText("loc_third_w1", `Location of ${result.word_1 || ''}`);
-        setText("met_third_w1", `Method of ${result.word_1 || ''}`);
-        setText("met_first_w1", `Method of ${result.word_1 || ''}`);
+        setText("loc_third_w1", `Location of ${result.word_1 || 'Destruction'}`);
+        setText("met_third_w1", `Method of ${result.word_1 || 'Destruction'}`);
+        setText("met_first_w1", `Method of ${result.word_1 || 'Destruction'}`);
 
         // Overview Text Logic
         const scopeType = result.word_3 || '';
