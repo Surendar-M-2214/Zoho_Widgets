@@ -1516,63 +1516,129 @@
       if (!getParams?.EntityId?.length) return;
 
       const recordId = getParams.EntityId[0];
-      const funcName = "Preview_Merge_File"; // Deluge Function
-      const req = {
-        arguments: JSON.stringify({ Estimate_id: recordId })
-      };
+      const MODULE_API_NAME = "Purchase_Orders"; // Confirmed by user
 
-      ZOHO.CRM.FUNCTIONS.execute(funcName, req).then(response => {
-        if (!response.details || !response.details.output) {
-          console.error("Invalid response from Zoho Function");
-          alert("Could not fetch data from Zoho. Please check the logs.");
+      // Fetch Record directly from CRM
+      ZOHO.CRM.API.getRecord({
+        Entity: MODULE_API_NAME,
+        RecordID: recordId
+      }).then(function (response) {
+
+        if (!response.data || !response.data.length) {
+          console.error("No data found for this record.");
+          alert("No data found. Please check permissions or record ID.");
           return;
         }
 
-        const result = JSON.parse(response.details.output);
+        const data = response.data[0];
+        console.log("Fetched Data:", data);
 
-        // --- LOGIC IMPLEMENTATION (Updated for Backend Logic) ---
+        /* 
+           FIELD MAPPING
+           -------------
+           Map the CRM API Name to the internal logic variables.
+           User Provided API Names:
+           - Place_of_Destruction
+           - Place_of_Destruction_Others
+           - Location_of_Destruction
+           - Location_of_Destruction_Others
+           - Date_of_Collection
+           - Item_Destroyed
+           - Quantity_of_Item
+           - Address_Type
+           - Collection_Address
+           - Details_of_the_Person_In_Charge
+           - Truck_Number
+           - Project_Supervisor
+           - Method_of_Destruction
+           - Date_of_Destruction
+           - Disposed_Item
+           - Certificate_Type
+           - Purchase_Order_Number (Purchase Quotation Number)
+           - Vendor_Name (Vendor Name)
+        */
 
-        // 1. Place of Destruction
-        // Backend now handles the "Others" logic and returns the correct string in 'place_of_destruction'.
-        let finalPlace = result.place_of_destruction || result.cf_place_of_destruction || "";
-        if (finalPlace === "Others" && result.cf_test_place_of_destruction) {
-          finalPlace = result.cf_test_place_of_destruction;
+        // --- 1. Logic Processing ---
+
+        // Place of Destruction Logic
+        let finalPlace = data.Place_of_Destruction || "";
+        if (finalPlace === "Others" && data.Place_of_Destruction_Others) {
+          finalPlace = data.Place_of_Destruction_Others;
         }
 
-        // 2. Address Type
-        // Backend now handles the Company/Collection address switch and returns the correct string in 'company_address'.
-        // We use that directly.
-        let finalAddress = result.company_address || "";
-
-        // 3. Location of Destruction
-        // Backend should return 'location_of_destruction' with the correct value.
-        let finalLocation = result.location_of_destruction || result.cf_location_of_destruction || "";
-        // Safety Fallback: If backend logic didn't trigger or we verify "Others"
-        if (finalLocation === "Others" && result.cf_test_location_of_destructio) {
-          finalLocation = result.cf_test_location_of_destructio;
+        // Location of Destruction Logic
+        let finalLocation = data.Location_of_Destruction || "";
+        if (finalLocation === "Others" && data.Location_of_Destruction_Others) {
+          finalLocation = data.Location_of_Destruction_Others;
         }
 
-        // 4, 5, 6. Optional Fields
-        const personInCharge = result.cf_details_of_the_person_in_charge || "";
-        const truckNumber = result.cf_truck_number || "";
-        const projectSupervisor = result.cf_project_supervisor || "";
+        // Address Logic
+        // If Address Type is 'Collection Address', use 'Collection_Address'.
+        // Otherwise, construct address from Billing Fields (Street, City, State, Code, Country)
+        let finalAddress = "";
+
+        if (data.Address_Type === "Collection Address" && data.Collection_Address) {
+          finalAddress = data.Collection_Address;
+        } else {
+          // Construct Billing Address
+          const parts = [
+            data.Billing_Street,
+            data.Billing_City,
+            data.Billing_State,
+            data.Billing_Code,
+            data.Billing_Country
+          ].filter(p => p); // Remove empty or null values
+
+          finalAddress = parts.join(", ");
+        }
 
 
-        // Populate Confirmation UI
-        setText("conf-company_name", result.company_name);
-        setText("conf-report_no", result.report_no);
-        setText("conf-cert_type", (result.word_1 || "") + " Report");
-        setText("conf-date_collection", result.date_of_collection);
-        setText("conf-date_destruction", result.date_of_destruction);
-        setText("conf-items", result.items_destroyed);
-        setText("conf-method", result.method_of_destruction);
+        // --- 2. Data Population ---
 
-        // New/Updated Fields in Confirmation UI
+        // Company Name
+        const companyName = data.Vendor_Name?.name || ""; // User mapped Vendor Name
+
+        // Report Number
+        const reportNo = data.Purchase_Order_Number || ""; // User mapped
+
+        // Certificate Type
+        const certType = (data.Certificate_Type || "") + " Report";
+
+        // Dates
+        const dateCollection = data.Date_of_Collection || "";
+        const dateDestruction = data.Date_of_Destruction || "";
+
+        // Items
+        const itemsDestroyed = data.Item_Destroyed || "";
+
+        // Method
+        const method = data.Method_of_Destruction || "";
+
+        // Optional Fields
+        const personInCharge = data.Details_of_the_Person_In_Charge || "";
+        const truckNumber = data.Truck_Number || "";
+        const projectSupervisor = data.Project_Supervisor || "";
+
+        // Page 3 Specifics
+        const disposedItem = data.Disposed_Item || "";
+        const quantity = data.Quantity_of_Item || "";
+
+
+        // --- 3. UI Updates ---
+
+        // Confirmation UI
+        setText("conf-company_name", companyName);
+        setText("conf-report_no", reportNo);
+        setText("conf-cert_type", certType);
+        setText("conf-date_collection", dateCollection);
+        setText("conf-date_destruction", dateDestruction);
+        setText("conf-items", itemsDestroyed);
+        setText("conf-method", method);
         setText("conf-place", finalPlace);
         setText("conf-location", finalLocation);
         setText("conf-address", finalAddress);
 
-        // Toggle Optional Fields in Verify UI
+        // Optional Sections Visibility
         if (personInCharge) {
           setText("conf-person", personInCharge);
           document.getElementById("container-person").classList.remove("hidden");
@@ -1594,51 +1660,40 @@
           document.getElementById("container-supervisor").classList.add("hidden");
         }
 
-        // Enable Confirm Button
-        const btn = document.getElementById('btn-confirm');
-        const loader = document.getElementById('conf-loading');
-        if (btn) {
-          btn.disabled = false;
-          btn.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
-          btn.classList.add('bg-blue-600', 'text-white', 'hover:brightness-110');
-        }
-        if (loader) loader.classList.add('hidden');
 
+        // Generated Document UI (Hidden Print Sections)
 
-        // --- Mapping Data to HTML (Exact same fields as source) ---
-        setText("company_name_1", result.company_name);
-        setText("place_of_destruction_1", result.place_of_destruction);
-        setText("items_destroyed_1", result.items_destroyed);
-        setText("date_of_collection_1", result.date_of_collection);
-        setText("date_of_destruction_1", result.date_of_destruction);
-        setText("method_of_destruction_1", result.method_of_destruction);
-
-        setText("items_destroyed_2", result.items_destroyed);
-        defaultTitlePage2 = result.items_destroyed || "";
-
-        setText("company_name_2_centered", result.company_name);
-        setText("report_no", result.report_no);
-
-        // QR Code
-        const qrImageEl = document.getElementById("qr_image_1");
-        if (qrImageEl && result.qr_code_url) {
-          qrImageEl.src = result.qr_code_url;
-        }
-
-        setText("company_name_4", result.company_name);
-        setHTML("company_address_3", (finalAddress || '').replace(/\\n/g, ", ").replace(/\n/g, ", ").replace(/\/n/g, ", "));
-        setText("disposed_item_3", result.disposed_item);
-        setText("certificate_type", result.word_1);
-        setHTML("quantity_of_item_3", (result.quantity_of_item || '').replace(/\n/g, "<br>"));
-        setHTML("location_of_destruction_3", (finalLocation || '').replace(/\n/g, "<br>"));
-        setText("method_of_destruction_3", result.method_of_destruction);
-
-        // Update Page 1 Place as well? 
-        // Requirement 1 said "Place of Destruction". Page 1 has "place_of_destruction_1". 
-        // Let's update it to use the calculated 'finalPlace' just in case.
+        // Page 1
+        setText("company_name_1", companyName);
         setText("place_of_destruction_1", finalPlace);
+        setText("items_destroyed_1", itemsDestroyed);
+        setText("date_of_collection_1", dateCollection);
+        setText("date_of_destruction_1", dateDestruction);
+        setText("method_of_destruction_1", method);
+        setText("report_no", reportNo);
+        setText("certificate_type", data.Certificate_Type || ""); // Just the type, not 'Report' suffix for Main Header?
+        // Note: original code used 'result.word_1' for 'conf-cert_type' (word_1 + " Report")
+        // and 'result.certificate_type' (which might be the full string?) for 'certificate_type' ID.
+        // Let's assume data.Certificate_Type is the main string (e.g., "Destruction").
+        // Header: <h1 id="certificate_type"></h1>
+        setText("certificate_type", data.Certificate_Type || "");
 
-        // Update Overview Page Optional Fields
+
+        // Page 2
+        setText("items_destroyed_2", itemsDestroyed);
+        setText("certificate_type1", data.Certificate_Type || "");
+        setText("company_name_2_centered", companyName);
+        // defaultTitlePage2 logic from original
+        defaultTitlePage2 = itemsDestroyed || "";
+
+        // Page 3
+        setText("company_name_4", companyName);
+        setText("company_address_3", finalAddress);
+        setText("disposed_item_3", disposedItem);
+        setText("quantity_of_item_3", quantity);
+        setText("location_of_destruction_3", finalLocation);
+        setText("method_of_destruction_3", method);
+        // Page 3 Optional Rows
         if (personInCharge) {
           setText("val-person", personInCharge);
           document.getElementById("row-person").classList.remove("hidden");
@@ -1660,37 +1715,68 @@
           document.getElementById("row-supervisor").classList.add("hidden");
         }
 
-        // Labels mapping
-        const p3Title = `${result.items_destroyed || ''} ${result.word_1 || ''}`;
+        // Update Default Page Title for Dashboard Input
+        defaultTitlePage3 = itemsDestroyed || "";
+        updatePageTitle(""); // Reset/Init
+
+        // Enable Confirm Button
+        const btn = document.getElementById('btn-confirm');
+        const loader = document.getElementById('conf-loading');
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+          btn.classList.add('bg-blue-600', 'text-white', 'hover:brightness-110');
+        }
+        if (loader) loader.classList.add('hidden');
+
+
+        // Labels mapping & QR Code
+        const qrImageEl = document.getElementById("qr_image_1");
+        // QR Code URL is not in standard fields. Assuming it might not be available or needs a placeholder?
+        // If data.QR_Code_URL exists? User didn't map it. Leaving empty or standard logic.
+        if (qrImageEl && data.QR_Code_URL) {
+          qrImageEl.src = data.QR_Code_URL;
+        }
+
+        // Logic for Dynamic Words (Inferred)
+        const word1 = data.Certificate_Type || 'Destruction';
+        // Simple heuristic for word2 (Past tense verb):
+        const word2 = (word1.toLowerCase().includes('destruction')) ? 'Destroyed' :
+          (word1.toLowerCase().includes('disposal')) ? 'Disposed' :
+            (word1.toLowerCase().includes('recycling')) ? 'Recycled' : 'Processed';
+        const word3 = 'Physical'; // Default scope
+
+        // Update Text Mixing
+        const p3Title = `${itemsDestroyed || ''} ${word1 || ''}`;
         setText("thirdPage", p3Title);
         defaultTitlePage3 = p3Title;
-        setText("sec_word2_mix", `was securely ${result.word_2 || ''} accordingly`);
-        setText("pla_word1_mix", `Place of ${result.word_1 || 'Destruction'}`);
-        setText("date_word1_mix", `Date of ${result.word_1 || 'Destruction'}`);
-        setText("method_word1_mix", `Method of ${result.word_1 || 'Destruction'}`);
-        setText("item_word1_mix", `Items ${result.word_2 || ''}`);
-        setText("secondpage_w2", `${result.word_2 || ''} BY`);
-        setText("third_w2", `${result.word_2 || ''} Item`);
-        setText("loc_third_w1", `Location of ${result.word_1 || 'Destruction'}`);
-        setText("met_third_w1", `Method of ${result.word_1 || 'Destruction'}`);
-        setText("met_first_w1", `Method of ${result.word_1 || 'Destruction'}`);
+
+        setText("sec_word2_mix", `was securely ${word2} accordingly`);
+        setText("pla_word1_mix", `Place of ${word1}`);
+        setText("date_word1_mix", `Date of ${word1}`);
+        setText("method_word1_mix", `Method of ${word1}`);
+        setText("item_word1_mix", `Items ${word2}`); // "Items Destroyed" / "Items Disposed"
+        setText("secondpage_w2", `${word2} BY`); // "DESTROYED BY"
+        setText("third_w2", `${word2} Item`);
+        setText("loc_third_w1", `Location of ${word1}`);
+        setText("met_third_w1", `Method of ${word1}`);
+        setText("met_first_w1", `Method of ${word1}`);
 
         // Overview Text Logic
-        const scopeType = result.word_3 || '';
-        const processType = result.word_1 || '';
-        const itemName = result.disposed_item || '';
-        const company = result.company_name || '';
+        const itemName = disposedItem || '';
+        const company = companyName || '';
         const disposedPrefix = "was securely";
-        const disposedWord = result.word_2 || '';
-        const date = result.date_of_destruction || '';
+        const date = dateDestruction || '';
 
-        let overviewText = `This report certifies that the <strong>${scopeType}</strong> <strong>${processType}</strong> of the <strong>${itemName}</strong> collected from <strong>${company}</strong>`;
+        let overviewText = `This report certifies that the <strong>${word3}</strong> <strong>${word1}</strong> of the <strong>${itemName}</strong> collected from <strong>${company}</strong>`;
 
-        if (disposedWord && date) {
-          overviewText += ` ${disposedPrefix} <strong>${disposedWord}</strong> on <strong>${date}</strong> at a designed premise.`;
+        if (word2 && date) {
+          overviewText += ` ${disposedPrefix} <strong>${word2}</strong> on <strong>${date}</strong> at a designed premise.`;
         }
         setHTML("overview_rd_page", overviewText);
+
       });
+
     });
 
     ZOHO.embeddedApp.init();
