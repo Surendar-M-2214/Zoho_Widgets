@@ -1457,8 +1457,19 @@
         if (existing) existing.remove();
 
         const num = document.createElement('div');
-        // Changed text color to white as requested ("white bright")
-        num.className = "page-number absolute bottom-2 right-4 text-xs text-white font-bold z-50";
+
+        // FIX: High Contrast Strategy
+        // 1. Text is White (visible on dark footer)
+        // 2. Text has Black Shadow/Outline (visible on white areas)
+        // 3. Position is safe (bottom-8) to avoid printer margins
+        // 4. Z-index 50 to float above backgrounds
+        let txt_color = "text-white";
+        if (index < 3) {
+          txt_color = "text-slate-900";
+        }
+        num.className = "page-number absolute bottom-2 right-4 text-xs " + txt_color + " font-bold z-50";
+
+
         num.innerText = `Page ${index + 1} of ${total}`;
         page.appendChild(num);
       });
@@ -1602,11 +1613,19 @@
         const reportNo = data.Purchase_Order_Number || ""; // User mapped
 
         // Certificate Type
-        const certType = (data.Certificate_Type || "") + " Report";
+        const certType = (data.Certificate_Type_2 || "") + " Report";
+
+        // Helper to format date YYYY-MM-DD to DD-MM-YYYY
+        function formatDate(d) {
+          if (!d) return "";
+          const p = d.split('-');
+          if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+          return d;
+        }
 
         // Dates
-        const dateCollection = data.Date_of_Collection || "";
-        const dateDestruction = data.Date_of_Destruction || "";
+        const dateCollection = formatDate(data.Date_of_Collection || "");
+        const dateDestruction = formatDate(data.Date_of_Destruction || "");
 
         // Items
         const itemsDestroyed = data.Item_Destroyed || "";
@@ -1671,17 +1690,17 @@
         setText("date_of_destruction_1", dateDestruction);
         setText("method_of_destruction_1", method);
         setText("report_no", reportNo);
-        setText("certificate_type", data.Certificate_Type || ""); // Just the type, not 'Report' suffix for Main Header?
+        // Just the type, not 'Report' suffix for Main Header?
         // Note: original code used 'result.word_1' for 'conf-cert_type' (word_1 + " Report")
         // and 'result.certificate_type' (which might be the full string?) for 'certificate_type' ID.
         // Let's assume data.Certificate_Type is the main string (e.g., "Destruction").
         // Header: <h1 id="certificate_type"></h1>
-        setText("certificate_type", data.Certificate_Type || "");
+        setText("certificate_type", data.Certificate_Type_2 || "");
 
 
         // Page 2
         setText("items_destroyed_2", itemsDestroyed);
-        setText("certificate_type1", data.Certificate_Type || "");
+        setText("certificate_type1", data.Certificate_Type_2 || "");
         setText("company_name_2_centered", companyName);
         // defaultTitlePage2 logic from original
         defaultTitlePage2 = itemsDestroyed || "";
@@ -1739,12 +1758,12 @@
         }
 
         // Logic for Dynamic Words (Inferred)
-        const word1 = data.Certificate_Type || 'Destruction';
+        const word1 = data.Certificate_Type_2 || 'Destruction';
         // Simple heuristic for word2 (Past tense verb):
         const word2 = (word1.toLowerCase().includes('destruction')) ? 'Destroyed' :
           (word1.toLowerCase().includes('disposal')) ? 'Disposed' :
             (word1.toLowerCase().includes('recycling')) ? 'Recycled' : 'Processed';
-        const word3 = 'Physical'; // Default scope
+        const word3 = data.Certificate_Type_1; // Default scope
 
         // Update Text Mixing
         const p3Title = `${itemsDestroyed || ''} ${word1 || ''}`;

@@ -1457,8 +1457,11 @@
         if (existing) existing.remove();
 
         const num = document.createElement('div');
-        // Changed text color to white as requested ("white bright")
-        num.className = "page-number absolute bottom-2 right-4 text-xs text-white font-bold z-50";
+        let txt_color = "text-white";
+        if (index < 3) {
+          txt_color = "text-slate-900";
+        }
+        num.className = "page-number absolute bottom-2 right-4 text-xs " + txt_color + " font-bold z-50";
         num.innerText = `Page ${index + 1} of ${total}`;
         page.appendChild(num);
       });
