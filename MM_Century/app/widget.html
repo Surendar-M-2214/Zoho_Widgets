@@ -353,7 +353,7 @@
     .image-frame img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
 
     /* QR Code */
@@ -377,10 +377,61 @@
       max-height: 90%;
       object-fit: contain;
     }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      top: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .toast {
+      padding: 0.75rem 1.5rem;
+      border-radius: 1rem;
+      background: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #1e293b;
+      transform: translateY(-20px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast-error {
+      border-left: 4px solid #ef4444;
+    }
+
+    .toast-success {
+      border-left: 4px solid #10b981;
+    }
+
+    .toast-info {
+      border-left: 4px solid #3b82f6;
+    }
   </style>
 </head>
 
 <body class="bg-slate-50 min-h-screen text-slate-800">
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
 
   <!-- ================= CONFIRMATION UI (Step 1) ================= -->
   <div id="confirmation-ui" class="max-w-4xl mx-auto p-4 md:p-6 min-h-screen flex items-center justify-center">
@@ -547,6 +598,18 @@
           class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-full text-xs font-bold uppercase tracking-wider flex items-center shadow-sm">
           <span class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></span> Connecting...
         </div>
+        <button id="btn-save-crm" onclick="attachImagesToCRM()"
+          class="btn-3d bg-white text-blue-600 border border-blue-200 px-6 py-2.5 rounded-xl hover:bg-blue-50 flex items-center gap-2 font-bold text-sm tracking-wide shadow-sm transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          </svg>
+          <span id="btn-save-text">SAVE TO CRM</span>
+          <div id="save-loader" class="hidden ml-2">
+            <div class="loader" style="width:14px; height:14px; border-width: 2px; border-top-color: #2563eb;"></div>
+          </div>
+        </button>
+
         <button onclick="generateAndPrint()"
           class="btn-3d bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-xl hover:brightness-110 flex items-center gap-2 font-bold text-sm tracking-wide shadow-md transition-all">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1333,8 +1396,129 @@
       });
     }
 
+    /* ================= UI NOTIFICATIONS ================= */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+
+      let icon = '';
+      if (type === 'error') icon = '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+      else if (type === 'success') icon = '<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+      else icon = '<svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+
+      toast.innerHTML = `${icon}<span>${message}</span>`;
+      container.appendChild(toast);
+
+      // Trigger animation
+      setTimeout(() => toast.classList.add('show'), 10);
+
+      // Auto hide
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    let isUploading = false;
+
+    function hasAttachments() {
+      return sections.some(section => section.items && section.items.length > 0);
+    }
+
+    /* ================= CRM ATTACHMENT ================= */
+    async function attachImagesToCRM() {
+      if (!hasAttachments()) {
+        showToast("No data found to save!", "error");
+        return;
+      }
+      if (isUploading || !sections.length) return;
+
+      const recordId = currentRecordId;
+      const moduleName = currentEntity;
+
+      if (!recordId || !moduleName) {
+        console.error("Missing Record ID or Module Name for attachment", { recordId, moduleName });
+        return;
+      }
+
+      // UI Feedback for Save Button
+      const btnSave = document.getElementById("btn-save-crm");
+      const btnSaveText = document.getElementById("btn-save-text");
+      const saveLoader = document.getElementById("save-loader");
+
+      if (btnSave) btnSave.disabled = true;
+      if (btnSaveText) btnSaveText.innerText = "SAVING...";
+      if (saveLoader) saveLoader.classList.remove("hidden");
+
+      isUploading = true;
+      console.log(`Attaching images to ${moduleName} (ID: ${recordId}) in parallel...`);
+
+      const uploadPromises = [];
+
+      for (const section of sections) {
+        if (!section.items.length) continue;
+
+        for (let i = 0; i < section.items.length; i++) {
+          const item = section.items[i];
+          const blob = dataURLtoBlob(item.src);
+          const extension = item.fileType === 'pdf' ? 'jpg' : 'png';
+          const fileName = `${section.heading || 'Section'}_${item.type.toUpperCase()}_${i + 1}.${extension}`;
+
+          const uploadPromise = ZOHO.CRM.API.attachFile({
+            Entity: moduleName,
+            RecordID: recordId,
+            File: {
+              Name: fileName,
+              Content: blob
+            }
+          }).then(() => {
+            console.log(`Attached: ${fileName}`);
+          }).catch(error => {
+            console.error(`Error attaching ${fileName}:`, error);
+          });
+
+          uploadPromises.push(uploadPromise);
+        }
+      }
+
+      try {
+        await Promise.all(uploadPromises);
+        console.log("All background attachments complete");
+        showToast("Successfully saved to CRM", "success");
+        if (btnSaveText) btnSaveText.innerText = "SAVED TO CRM";
+        if (btnSave) {
+          btnSave.classList.remove("text-blue-600", "border-blue-200");
+          btnSave.classList.add("text-green-600", "border-green-200", "bg-green-50");
+        }
+      } catch (error) {
+        console.error("Error during parallel upload:", error);
+        if (btnSaveText) btnSaveText.innerText = "SAVE FAILED";
+      } finally {
+        isUploading = false;
+        if (saveLoader) saveLoader.classList.add("hidden");
+        setTimeout(() => {
+          if (btnSave) btnSave.disabled = false;
+          if (btnSaveText && btnSaveText.innerText !== "SAVED TO CRM") btnSaveText.innerText = "SAVE TO CRM";
+        }, 3000);
+      }
+    }
+
+    function dataURLtoBlob(dataurl) {
+      var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+
     /* ================= PRINT GENERATION ================= */
     function generateAndPrint() {
+      if (!hasAttachments()) {
+        showToast("No data found to generate PDF!", "error");
+        return;
+      }
       const container = document.getElementById("dynamic-pages-container");
       container.innerHTML = "";
 
@@ -1506,7 +1690,14 @@
       });
     }
 
+    let currentRecordId = null;
+    let currentEntity = null;
+
     ZOHO.embeddedApp.on("PageLoad", function (getParams) {
+      console.log("Entity details (getParams):", getParams);
+      if (getParams && getParams.Entity) {
+        currentEntity = getParams.Entity;
+      }
 
       // Update UI status
       const statusEl = document.getElementById('zoho-status');
@@ -1519,6 +1710,7 @@
       if (!getParams?.EntityId?.length) return;
 
       const recordId = getParams.EntityId[0];
+      currentRecordId = recordId;
       const funcName = "Preview_Merge_File"; // Deluge Function
       const req = {
         arguments: JSON.stringify({ Estimate_id: recordId })
@@ -1532,6 +1724,7 @@
         }
 
         const result = JSON.parse(response.details.output);
+        console.log("Fetched Result from Zoho Function:", result);
 
         // --- LOGIC IMPLEMENTATION (Updated for Backend Logic) ---
 
