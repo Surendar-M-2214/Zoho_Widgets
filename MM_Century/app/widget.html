@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <script src="https://live.zwidgets.com/js-sdk/1.5/ZohoEmbededAppSDK.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
 
@@ -270,8 +271,43 @@
         height: 297mm !important;
         overflow: hidden !important;
       }
+    }
 
-
+    /* --- HTML2PDF PERFECT ALIGNMENT FIX --- */
+    body.generating-pdf {
+      background: white !important;
+      overflow: visible !important;
+      height: auto !important;
+    }
+    body.generating-pdf #dashboard-ui,
+    body.generating-pdf .no-print {
+      display: none !important;
+    }
+    body.generating-pdf #print-content {
+      display: block !important;
+      width: 210mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+      position: relative !important;
+    }
+    body.generating-pdf #print-pages-container {
+      gap: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    body.generating-pdf .page {
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+      page-break-after: auto !important;
+      page-break-inside: avoid !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      overflow: hidden !important;
+      display: block !important;
+      position: relative !important;
     }
 
 
@@ -282,7 +318,7 @@
     /* --- SCREEN STYLES --- */
     @media screen {
       #print-content {
-        display: none !important;
+        display: none;
         /* Hidden on screen */
       }
     }
@@ -591,31 +627,37 @@
       </div>
 
       <!-- Right: Actions -->
-      <div class="flex items-center justify-end w-full md:w-auto md:flex-1 gap-4">
+      <div class="flex items-center justify-end w-full md:w-auto md:flex-1 gap-2 md:gap-4 flex-wrap">
         <div id="zoho-status"
-          class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-full text-xs font-bold uppercase tracking-wider flex items-center shadow-sm">
+          class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-full text-xs font-bold uppercase tracking-wider flex items-center shadow-sm whitespace-nowrap">
           <span class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></span> Connecting...
         </div>
-        <button id="btn-save-crm" onclick="attachImagesToCRM()"
-          class="btn-3d bg-white text-blue-600 border border-blue-200 px-6 py-2.5 rounded-xl hover:bg-blue-50 flex items-center gap-2 font-bold text-sm tracking-wide shadow-sm transition-all">
+        <button id="btn-save-crm" onclick="showPreview()"
+          class="btn-3d bg-white text-blue-600 border border-blue-200 px-6 py-2.5 rounded-xl hover:bg-blue-50 flex items-center gap-2 font-bold text-sm tracking-wide shadow-sm transition-all whitespace-nowrap">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
           <span id="btn-save-text">SAVE TO CRM</span>
-          <div id="save-loader" class="hidden ml-2">
-            <div class="loader" style="width:14px; height:14px; border-width: 2px; border-top-color: #2563eb;"></div>
-          </div>
         </button>
 
         <button onclick="generateAndPrint()"
-          class="btn-3d bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-xl hover:brightness-110 flex items-center gap-2 font-bold text-sm tracking-wide shadow-md transition-all">
+          class="btn-3d bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-xl hover:brightness-110 flex items-center gap-2 font-bold text-sm tracking-wide shadow-md transition-all whitespace-nowrap">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
           <span class="hidden md:inline">GENERATE PDF</span>
           <span class="md:hidden">PRINT</span>
+        </button>
+
+        <!-- Redesigned Small Red Close Button -->
+        <button onclick="closeWidget()"
+          class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-100 flex items-center gap-1 font-bold text-xs tracking-wide shadow-sm transition-all whitespace-nowrap ml-2">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          <span>CLOSE</span>
         </button>
       </div>
     </div>
@@ -680,13 +722,53 @@
   </div>
 
 
+  <!-- ================= PREVIEW MODAL ================= -->
+  <div id="preview-modal"
+    class="fixed inset-0 z-[100] hidden flex flex-col bg-slate-900/90 backdrop-blur-md transition-opacity opacity-0 p-4 md:p-8">
+
+    <!-- Modal Header -->
+    <div class="max-w-5xl mx-auto w-full flex justify-between items-center mb-6 text-white">
+      <div>
+        <h2 class="text-2xl font-bold text-white">Document Preview</h2>
+        <p class="text-slate-400 text-sm">Review the generated PDF layout before saving to CRM.</p>
+      </div>
+      <div class="flex gap-4">
+        <button onclick="closePreview()"
+          class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all border border-slate-700">
+          Cancel
+        </button>
+        <button id="btn-confirm-save-pdf" onclick="saveUnifiedPDF()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          </svg>
+          <span id="btn-confirm-save-text">CONFIRM & SAVE TO CRM</span>
+          <div id="save-pdf-loader" class="hidden ml-2">
+            <div class="loader" style="width:14px; height:14px; border-width: 2px; border-top-color: white;"></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Preview Container (Paper Mockups) -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center gap-8 pb-12">
+      <div id="preview-container-inner"
+        class="flex flex-col items-center gap-8 origin-top scale-[0.6] md:scale-[0.8] lg:scale-100 transition-transform">
+        <!-- Generated pages will be cloned here for preview -->
+      </div>
+    </div>
+  </div>
+
+
   <!-- ================= PRINT CONTENT (Hidden on Screen) ================= -->
   <!-- ================= PRINT CONTENT (Hidden on Screen) ================= -->
   <div id="print-content" style="display:none; font-family: 'Arial', sans-serif;">
 
     <!-- PAGE 1: Main Certificate -->
     <div class="page page-bordered relative">
-      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none"
+        style="transform: scale(1.01); transform-origin: top center;">
       <div class="qr-image-container-absolute z-10">
         <img id="qr_image_1" src="" alt="QR">
       </div>
@@ -754,7 +836,8 @@
 
     <!-- PAGE 2: Report -->
     <div class="page page-bordered relative">
-      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none"
+        style="transform: scale(1.01); transform-origin: top center;">
       <div class="pb-2 pt-4 w-full h-full relative z-10">
         <div class="p-10 pt-20">
           <header class="flex justify-center mb-8">
@@ -784,7 +867,8 @@
 
     <!-- PAGE 3: Overview -->
     <div class="page page-bordered relative">
-      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <img src="background.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none"
+        style="transform: scale(1.01); transform-origin: top center;">
       <div class="pb-2 pt-18 w-full h-full relative z-10">
         <div class="p-10 pt-20">
           <main class="text-left px-12">
@@ -867,7 +951,7 @@
 
     <!-- PAGE 4: Disclaimer -->
     <div class="page relative">
-      <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+      <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" style="transform: scale(1.01); transform-origin: top center;">
       <div class="w-full h-full relative p-10 z-10">
         <div class="flex justify-center mt-24">
           <img src="MMC_Main_Icon_Sq_TransBG.png" class="w-48">
@@ -1425,124 +1509,26 @@
     }
 
     /* ================= CRM ATTACHMENT ================= */
-    async function attachImagesToCRM() {
-      if (!hasAttachments()) {
-        showToast("No data found to save!", "error");
-        return;
-      }
-      if (isUploading || !sections.length) return;
 
-      const recordId = currentRecordId;
-      const moduleName = currentEntity;
-
-      if (!recordId || !moduleName) {
-        console.error("Missing Record ID or Module Name for attachment", { recordId, moduleName });
-        return;
-      }
-
-      // UI Feedback for Save Button
-      const btnSave = document.getElementById("btn-save-crm");
-      const btnSaveText = document.getElementById("btn-save-text");
-      const saveLoader = document.getElementById("save-loader");
-
-      if (btnSave) btnSave.disabled = true;
-      if (btnSaveText) btnSaveText.innerText = "SAVING...";
-      if (saveLoader) saveLoader.classList.remove("hidden");
-
-      isUploading = true;
-      console.log(`Attaching images to ${moduleName} (ID: ${recordId}) in parallel...`);
-
-      const uploadPromises = [];
-
-      for (const section of sections) {
-        if (!section.items.length) continue;
-
-        for (let i = 0; i < section.items.length; i++) {
-          const item = section.items[i];
-          const blob = dataURLtoBlob(item.src);
-          const extension = item.fileType === 'pdf' ? 'jpg' : 'png';
-          const fileName = `${section.heading || 'Section'}_${item.type.toUpperCase()}_${i + 1}.${extension}`;
-
-          const uploadPromise = ZOHO.CRM.API.attachFile({
-            Entity: moduleName,
-            RecordID: recordId,
-            File: {
-              Name: fileName,
-              Content: blob
-            }
-          }).then(() => {
-            console.log(`Attached: ${fileName}`);
-          }).catch(error => {
-            console.error(`Error attaching ${fileName}:`, error);
-          });
-
-          uploadPromises.push(uploadPromise);
-        }
-      }
-
-      try {
-        await Promise.all(uploadPromises);
-        console.log("All background attachments complete");
-        showToast("Successfully saved to CRM", "success");
-        if (btnSaveText) btnSaveText.innerText = "SAVED TO CRM";
-        if (btnSave) {
-          btnSave.classList.remove("text-blue-600", "border-blue-200");
-          btnSave.classList.add("text-green-600", "border-green-200", "bg-green-50");
-        }
-      } catch (error) {
-        console.error("Error during parallel upload:", error);
-        if (btnSaveText) btnSaveText.innerText = "SAVE FAILED";
-      } finally {
-        isUploading = false;
-        if (saveLoader) saveLoader.classList.add("hidden");
-        setTimeout(() => {
-          if (btnSave) btnSave.disabled = false;
-          if (btnSaveText && btnSaveText.innerText !== "SAVED TO CRM") btnSaveText.innerText = "SAVE TO CRM";
-        }, 3000);
-      }
-    }
-
-    function dataURLtoBlob(dataurl) {
-      var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new Blob([u8arr], { type: mime });
-    }
 
     /* ================= PRINT GENERATION ================= */
-    function generateAndPrint() {
-      if (!hasAttachments()) {
-        showToast("No data found to generate PDF!", "error");
-        return;
-      }
+    function buildDynamicPages() {
       const container = document.getElementById("dynamic-pages-container");
       container.innerHTML = "";
 
-      // Loop through sections and create pages
       sections.forEach(section => {
         if (section.items.length === 0) return;
-
-        // Determine if this is a "PDF Section" or "Image Section" 
-        // Currently mixed usage is allowed, but we treat them per item or chunked.
-        // Constraint: Images are 2 per page. PDF pages are 1 per page.
-
-        // Strategy: Group items by processing requirement
-        // But simplified: Just iterate and fill pages.
 
         let currentChunk = [];
 
         section.items.forEach(item => {
           if (item.fileType === 'pdf') {
-            // PDF Pages get their own page (Full Size)
             if (currentChunk.length > 0) {
               renderChunk(container, section.heading, currentChunk);
               currentChunk = [];
             }
             renderFullPage(container, section.heading, item.src);
           } else {
-            // Images get chunked (2 per page)
             currentChunk.push(item);
             if (currentChunk.length === 2) {
               renderChunk(container, section.heading, currentChunk);
@@ -1551,16 +1537,20 @@
           }
         });
 
-        // Render remaining images
         if (currentChunk.length > 0) {
           renderChunk(container, section.heading, currentChunk);
         }
       });
 
-      // Add Page Numbers
       addPageNumbers();
+    }
 
-      // Trigger Print
+    function generateAndPrint() {
+      if (!hasAttachments()) {
+        showToast("No data found to generate PDF!", "error");
+        return;
+      }
+      buildDynamicPages();
       setTimeout(() => window.print(), 500);
     }
 
@@ -1572,7 +1562,7 @@
       page.className = "page relative";
       // Replaced CSS background with IMG tag
       page.innerHTML = `
-                <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+                <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" style="transform: scale(1.01); transform-origin: top center;">
                 <div class="w-full h-full relative z-10">
                     <div class="pt-36 text-center">
                         <h1 class="text-2xl font-black uppercase mb-6">${heading || ""}</h1>
@@ -1602,7 +1592,7 @@
       // 3. Text Overlays (Header text, Footer text) on Top (z-10)
 
       page.innerHTML = `
-                <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none">
+                <img src="FullBG.svg" class="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" style="transform: scale(1.01); transform-origin: top center;">
 
                 <div class="w-full h-full relative z-10">
                      <!-- Header Text Overlay (Moved BELOW the SVG Header) -->
@@ -1858,7 +1848,7 @@
         const p3Title = `${result.items_destroyed || ''} ${result.word_1 || ''}`;
         setText("thirdPage", p3Title);
         defaultTitlePage3 = p3Title;
-        setText("sec_word2_mix", `was securely ${result.word_2 || ''} accordingly`);
+        setText("sec_word2_mix", `was securely ${(result.word_2 || '').toLowerCase()} accordingly`);
         setText("pla_word1_mix", `Place of ${result.word_1 || 'Destruction'}`);
         setText("date_word1_mix", `Date of ${result.word_1 || 'Destruction'}`);
         setText("method_word1_mix", `Method of ${result.word_1 || 'Destruction'}`);
@@ -1878,10 +1868,10 @@
         const disposedWord = result.word_2 || '';
         const date = result.date_of_destruction || '';
 
-        let overviewText = `This report certifies that the <strong>${scopeType}</strong> <strong>${processType}</strong> of the <strong>${itemName}</strong> collected from <strong>${company}</strong>`;
+        let overviewText = `This report certifies that the <strong>${(scopeType || '').toLowerCase()}</strong> <strong>${(processType || '').toLowerCase()}</strong> of the <strong>${(itemName || '').toLowerCase()}</strong> collected from <strong>${company}</strong>`;
 
         if (disposedWord && date) {
-          overviewText += ` ${disposedPrefix} <strong>${disposedWord}</strong> on <strong>${date}</strong> at a designed premise.`;
+          overviewText += ` ${disposedPrefix} <strong>${disposedWord.toLowerCase()}</strong> on <strong>${date}</strong> at a designed premise.`;
         }
         setHTML("overview_rd_page", overviewText);
       });
@@ -1892,6 +1882,184 @@
     // Init with one empty section
     addSection();
 
+    function showPreview() {
+      if (!hasAttachments()) {
+        showToast("No data found to generate preview!", "error");
+        return;
+      }
+
+      buildDynamicPages();
+
+      // 2. Show Modal FIRST so we can measure/clone correctly if needed
+      const modal = document.getElementById("preview-modal");
+      modal.classList.remove("hidden");
+      setTimeout(() => modal.classList.add("opacity-100"), 10);
+
+      // 3. Clone content into preview modal with a small delay
+      setTimeout(() => {
+        const previewInner = document.getElementById("preview-container-inner");
+        previewInner.innerHTML = "";
+
+        // Select all pages from the hidden print-content
+        const pages = document.querySelectorAll("#print-content .page");
+
+        if (pages.length === 0) {
+          previewInner.innerHTML = `<div class="text-white text-xl font-bold py-20">No pages generated.</div>`;
+        } else {
+          pages.forEach((page, idx) => {
+            const clone = page.cloneNode(true);
+            // Ensure clone is visible and has a "paper" look
+            clone.style.display = "block";
+            clone.style.marginBottom = "20px";
+            clone.classList.add("shadow-2xl");
+            previewInner.appendChild(clone);
+          });
+        }
+      }, 100);
+    }
+
+    function closePreview() {
+      const modal = document.getElementById("preview-modal");
+      modal.classList.remove("opacity-100");
+      setTimeout(() => modal.classList.add("hidden"), 300);
+    }
+
+    // Helper: Base64 to Blob
+    function base64ToBlob(base64) {
+      const parts = base64.split(';base64,');
+      const contentType = parts[0].split(':')[1] || 'image/png';
+      const raw = window.atob(parts[1]);
+      const rawLength = raw.length;
+      const uInt8Array = new Uint8Array(rawLength);
+      for (let i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+      }
+      return new Blob([uInt8Array], { type: contentType });
+    }
+
+    async function saveUnifiedPDF() {
+      const btn = document.getElementById("btn-confirm-save-pdf");
+      const btnText = document.getElementById("btn-confirm-save-text");
+      const loader = document.getElementById("save-pdf-loader");
+
+      try {
+        btn.disabled = true;
+        btnText.innerText = "GENERATING PDF...";
+        loader.classList.remove("hidden");
+
+        // Apply alignment fix class to body
+        document.body.classList.add('generating-pdf');
+        
+        const element = document.getElementById("print-content");
+
+        // Wait for reflow
+        await new Promise(r => setTimeout(r, 400));
+
+        const opt = {
+          margin: 0,
+          filename: `Certificate_${currentRecordId}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            scrollY: 0
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        };
+
+        // Generate PDF as blob
+        const expectedPages = element.querySelectorAll(".page").length;
+        const pdfBlob = await html2pdf().set(opt).from(element).toPdf().get('pdf').then((pdf) => {
+          const totalPages = pdf.internal.getNumberOfPages();
+          for (let i = totalPages; i > expectedPages; i--) {
+            pdf.deletePage(i);
+          }
+          return pdf.output('blob');
+        });
+        
+        // Reset classes
+        document.body.classList.remove('generating-pdf');
+
+        btnText.innerText = "UPLOADING TO CRM...";
+
+        const reportNo = document.getElementById("report_no")?.innerText || currentRecordId;
+        const fileName = `${reportNo}_Certificate.pdf`;
+        const fileObj = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+        // 1. Upload Combined PDF
+        let entityName = currentEntity;
+        if (entityName === "PurchaseOrders") entityName = "Purchase_Orders";
+
+        console.log("Uploading PDF to", entityName, currentRecordId);
+        const pdfResp = await ZOHO.CRM.API.attachFile({
+          Entity: entityName,
+          RecordID: currentRecordId,
+          File: { Name: fileObj.name, Content: fileObj }
+        });
+
+        console.log("PDF Upload Response:", pdfResp);
+        if (pdfResp.status === "failure" || (pdfResp.data && pdfResp.data[0]?.code === "ERROR")) {
+          throw new Error(`PDF upload failed: ${JSON.stringify(pdfResp)}`);
+        }
+
+        // 2. Upload Separate Images
+        const capturedPhotos = [];
+        sections.forEach(s => {
+          s.items.forEach(item => {
+            if (item.type === 'image') {
+              capturedPhotos.push(item);
+            }
+          });
+        });
+
+        console.log("Saving individual images for report:", reportNo, "Count:", capturedPhotos.length);
+
+        const imageUploadPromises = capturedPhotos.map((imgData, index) => {
+          try {
+            const imgBlob = base64ToBlob(imgData.src);
+            const imgFileName = `${reportNo}_Photo_${index + 1}.png`;
+            const imgFile = new File([imgBlob], imgFileName, { type: "image/png" });
+
+            return ZOHO.CRM.API.attachFile({
+              Entity: entityName,
+              RecordID: currentRecordId,
+              File: { Name: imgFile.name, Content: imgFile }
+            });
+          } catch (e) {
+            console.error("Error creating image file:", e);
+            return Promise.resolve();
+          }
+        });
+
+        if (imageUploadPromises.length > 0) {
+          await Promise.all(imageUploadPromises);
+        }
+
+        showToast("Success!", "Report and photos saved to CRM record.", "success");
+
+        closePreview();
+
+        // Success effect
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#2563eb', '#4f46e5', '#3b82f6']
+        });
+
+      } catch (error) {
+        console.error("Save PDF Error:", error);
+        const errMsg = error.message || (typeof error === 'string' ? error : "Upload failed.");
+        showToast("Error", errMsg, "error");
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = "CONFIRM & SAVE TO CRM";
+        loader.classList.add("hidden");
+      }
+    }
+
     function confirmAndProceed() {
       document.getElementById('confirmation-ui').classList.add('hidden');
       document.getElementById('dashboard-ui').classList.remove('hidden');
@@ -1901,6 +2069,10 @@
     function goBack() {
       document.getElementById('dashboard-ui').classList.add('hidden');
       document.getElementById('confirmation-ui').classList.remove('hidden');
+    }
+
+    function closeWidget() {
+      ZOHO.CRM.UI.Popup.closeReload();
     }
   </script>
 </body>
