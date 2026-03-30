@@ -459,6 +459,17 @@
     .toast-info {
       border-left: 4px solid #3b82f6;
     }
+
+    .title-crop {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-height: 2.8em; /* Approximate for 2 lines of text-3xl */
+      line-height: 1.4;
+    }
   </style>
 </head>
 
@@ -780,7 +791,7 @@
           <main class="text-center text-black-600">
             <h1 class="text-4xl font-black uppercase">Certificate</h1>
             <h2 class="text-2xl font-bold uppercase my-2">of</h2>
-            <h1 id="certificate_type" class="text-4xl font-black uppercase"></h1>
+            <h1 id="certificate_type" class="text-4xl font-black uppercase title-crop" style="-webkit-line-clamp: 1; line-clamp: 1; max-height: 1.2em;"></h1>
 
             <p class="text-lg mt-12 max-w-2xl mx-auto">
               This document now certifies that the materials collected from
@@ -843,7 +854,7 @@
             <img src="MMC_Main_Icon_Sq_TransBG.png" class="w-48">
           </header>
           <main class="text-center">
-            <h1 id="items_destroyed_2" class="text-3xl font-black uppercase"></h1>
+            <h1 id="items_destroyed_2" class="text-3xl font-black uppercase title-crop"></h1>
 
 
             <h2 class="text-2xl font-bold uppercase my-12 pt-8">FOR</h2>
@@ -871,7 +882,7 @@
       <div class="pb-2 pt-18 w-full h-full relative z-10">
         <div class="p-10 pt-20">
           <main class="text-left px-12">
-            <h1 id="thirdPage" class="text-3xl font-black uppercase text-center"
+            <h1 id="thirdPage" class="text-3xl font-black uppercase text-center title-crop"
               style="margin-top:20px; margin-bottom: 20px;"></h1>
             <h2 class="text-2xl font-bold uppercase mb-4">OVERVIEW</h2>
             <p id="overview_rd_page" class="text-lg max-w-2xl mb-6"></p>
@@ -1420,60 +1431,88 @@
 
     /* ================= LOGIC: Upload & PDF Processing ================= */
     async function handleUpload(sectionId, fileList) {
+      console.log("Handle Upload started for section:", sectionId, "File count:", fileList.length);
       const s = sections.find(x => x.id === sectionId);
-      if (!s) return;
+      if (!s) {
+        console.error("Section not found:", sectionId);
+        return;
+      }
 
       const loader = document.getElementById(`loader-${sectionId}`);
       if (loader) loader.classList.remove('hidden');
 
       try {
         for (const file of fileList) {
+          console.log("Processing file:", file.name, "Type:", file.type, "Size:", file.size);
           if (file.type === 'application/pdf') {
+            console.log("File identified as PDF:", file.name);
             const pdfPages = await processPDF(file);
             s.items.push(...pdfPages);
+            console.log("PDF processed and pages added:", file.name, "Page count:", pdfPages.length);
           } else if (file.type.startsWith('image/')) {
+            console.log("File identified as Image:", file.name);
             const base64 = await toBase64(file);
             s.items.push({ type: 'image', src: base64, fileType: 'image' });
+            console.log("Image processed and added:", file.name);
+          } else {
+            console.warn("Unsupported file type:", file.name, file.type);
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error("Critical error in handleUpload:", e);
         alert("Error processing files: " + e.message);
       } finally {
         if (loader) loader.classList.add('hidden');
+        console.log("Handle Upload finished. Total items in section:", s.items.length);
         renderDashboard();
       }
     }
 
     async function processPDF(file) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-      const pages = [];
+      console.log("Starting processPDF for:", file.name);
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const pages = [];
+        console.log("PDF doc loaded:", file.name, "Number of pages:", pdf.numPages);
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for high quality
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          console.log("Rendering PDF page:", i);
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for high quality
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
 
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-        pages.push({
-          type: 'pdf', // Treat as PDF page
-          src: canvas.toDataURL('image/jpeg', 0.8),
-          fileType: 'pdf'
-        });
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+          pages.push({
+            type: 'pdf', // Treat as PDF page
+            src: canvas.toDataURL('image/jpeg', 0.8),
+            fileType: 'pdf'
+          });
+          console.log("Page", i, "rendered successfully");
+        }
+        return pages;
+      } catch (err) {
+        console.error("Error in processPDF for", file.name, ":", err);
+        throw err;
       }
-      return pages;
     }
 
     function toBase64(file) {
+      console.log("Starting toBase64 conversion for:", file.name);
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
+        reader.onload = () => {
+          console.log("toBase64 conversion successful for:", file.name);
+          resolve(reader.result);
+        };
+        reader.onerror = error => {
+          console.error("toBase64 conversion error for:", file.name, error);
+          reject(error);
+        };
       });
     }
 
@@ -1940,9 +1979,9 @@
         // Logic for Dynamic Words (Inferred)
         const word1 = data.Certificate_Type_2 || 'Destruction';
         // Simple heuristic for word2 (Past tense verb):
-        const word2 = (word1.toLowerCase().includes('destruction')) ? 'destroyed' :
-          (word1.toLowerCase().includes('disposal')) ? 'disposed' :
-            (word1.toLowerCase().includes('recycling')) ? 'recycled' : 'processed';
+        const word2 = (word1.toLowerCase().includes('destruction')) ? 'Destroyed' :
+          (word1.toLowerCase().includes('disposal')) ? 'Disposed' :
+            (word1.toLowerCase().includes('recycling')) ? 'Recycled' : 'Processed';
         const word3 = data.Certificate_Type_1; // Default scope
 
         // Update Text Mixing
@@ -1950,7 +1989,7 @@
         setText("thirdPage", p3Title);
         defaultTitlePage3 = p3Title;
 
-        setText("sec_word2_mix", `was securely ${word2} accordingly`);
+        setText("sec_word2_mix", `was securely ${word2.toLowerCase()} accordingly`);
         setText("pla_word1_mix", `Place of ${word1}`);
         setText("date_word1_mix", `Date of ${word1}`);
         setText("method_word1_mix", `Method of ${word1}`);
