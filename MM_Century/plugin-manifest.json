@@ -1,3 +1,8 @@
 {
-  "service": "CRM"
+  "service": "CRM",
+  "scopes": [
+    "ZohoCRM.modules.ALL",
+    "ZohoCRM.modules.attachments.CREATE",
+    "ZohoCRM.settings.ALL"
+  ]
 }

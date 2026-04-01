@@ -12,6 +12,7 @@
   <script src="https://live.zwidgets.com/js-sdk/1.5/ZohoEmbededAppSDK.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
 
@@ -915,7 +916,7 @@
                 <tr class="align-top">
                   <td class="font-semibold pb-2">Quantity of Item</td>
                   <td class="px-2 pb-2">:</td>
-                  <td id="quantity_of_item_3" class="pb-2"></td>
+                  <td id="quantity_of_item_3" class="pb-2" style="white-space: pre-wrap;"></td>
                 </tr>
 
                 <!-- Moved Truck here -->
@@ -935,7 +936,7 @@
                 <tr class="align-top">
                   <td id="loc_third_w1" class="font-semibold pb-2"></td>
                   <td class="px-2 pb-2">:</td>
-                  <td id="location_of_destruction_3" class="pb-2"></td>
+                  <td id="location_of_destruction_3" class="pb-2" style="white-space: pre-wrap;"></td>
                 </tr>
                 <tr class="align-top">
                   <td id="met_third_w1" class="font-semibold pb-2"></td>
@@ -1444,14 +1445,24 @@
       try {
         for (const file of fileList) {
           console.log("Processing file:", file.name, "Type:", file.type, "Size:", file.size);
+          const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+
           if (file.type === 'application/pdf') {
             console.log("File identified as PDF:", file.name);
             const pdfPages = await processPDF(file);
             s.items.push(...pdfPages);
             console.log("PDF processed and pages added:", file.name, "Page count:", pdfPages.length);
-          } else if (file.type.startsWith('image/')) {
-            console.log("File identified as Image:", file.name);
-            const base64 = await toBase64(file);
+          } else if (file.type.startsWith('image/') || isHeic) {
+            console.log("File identified as Image (HEIC compatible):", file.name);
+            let imageToProcess = file;
+
+            if (isHeic) {
+              console.log("Converting HEIC to JPEG...", file.name);
+              imageToProcess = await convertHeicToJpeg(file);
+              console.log("Conversion complete:", file.name);
+            }
+
+            const base64 = await toBase64(imageToProcess);
             s.items.push({ type: 'image', src: base64, fileType: 'image' });
             console.log("Image processed and added:", file.name);
           } else {
@@ -1514,6 +1525,23 @@
           reject(error);
         };
       });
+    }
+
+    async function convertHeicToJpeg(file) {
+      try {
+        const blob = await heic2any({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.7
+        });
+        const finalBlob = Array.isArray(blob) ? blob[0] : blob;
+        // Keep the same name but with .jpg extension for logging/tracking
+        const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+        return new File([finalBlob], newName, { type: "image/jpeg" });
+      } catch (err) {
+        console.error("HEIC Conversion failed:", err);
+        throw new Error("Could not convert HEIC image. Please try a standard JPG/PNG.");
+      }
     }
 
     /* ================= UI NOTIFICATIONS ================= */
@@ -1928,8 +1956,8 @@
         setText("company_name_4", companyName);
         setText("company_address_3", finalAddress);
         setText("disposed_item_3", disposedItem);
-        setText("quantity_of_item_3", quantity);
-        setText("location_of_destruction_3", finalLocation);
+        setHTML("quantity_of_item_3", (quantity || '').replace(/\\n/g, "<br>").replace(/\n/g, "<br>"));
+        setHTML("location_of_destruction_3", (finalLocation || '').replace(/\\n/g, "<br>").replace(/\n/g, "<br>"));
         setText("method_of_destruction_3", method);
         // Page 3 Optional Rows
         if (personInCharge) {
